@@ -48,7 +48,8 @@ type View =
   | 'asset_management'
   | 'property_report'
   | 'official_print'
-  | 'publish';
+  | 'publish'
+  | 'ai_assistant';
 
 // --- Constants & Mock Data ---
 
@@ -156,35 +157,64 @@ const Icon = ({ name, className = "", filled = false }: { name: string, classNam
   <span className={cn("material-symbols-outlined", filled && "filled", className)}>{name}</span>
 );
 
+type NavItem = {
+  id: string;
+  label: string;
+  icon: string;
+  highlight?: boolean;
+};
+
 const BottomNav = ({ active, onSelect }: { active: View, onSelect: (v: View) => void }) => {
-  const items = [
+  const items: NavItem[] = [
     { id: 'manager_dashboard', label: 'الرئيسية', icon: 'grid_view' },
     { id: 'property_details', label: 'العقارات', icon: 'apartment' },
+    { id: 'ai_assistant', label: 'مساعد ذكي', icon: 'auto_awesome', highlight: true },
     { id: 'accounting', label: 'المالية', icon: 'account_balance_wallet' },
     { id: 'settings', label: 'الإعدادات', icon: 'settings' },
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 flex justify-around items-center py-3 pb-6 px-4 z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
-      {items.map((item) => (
-        <button
-          key={item.id}
-          onClick={() => onSelect(item.id as View)}
-          className={cn(
-            "flex flex-col items-center gap-1 transition-all relative px-4 py-1 rounded-2xl",
-            active === item.id ? "text-primary" : "text-slate-400 hover:text-slate-600"
-          )}
-        >
-          {active === item.id && (
-            <motion.div 
-              layoutId="nav-active"
-              className="absolute inset-0 bg-primary/5 rounded-2xl"
-            />
-          )}
-          <Icon name={item.icon} className="text-2xl relative z-10" filled={active === item.id} />
-          <span className="text-[10px] font-black relative z-10">{item.label}</span>
-        </button>
-      ))}
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 flex justify-around items-center py-3 pb-6 px-2 z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
+      {items.map((item) => {
+        if (item.highlight) {
+          return (
+            <button
+              key={item.id}
+              onClick={() => onSelect(item.id as View)}
+              className="flex flex-col items-center gap-1 transition-all relative -mt-5"
+            >
+              <div className={cn(
+                "w-14 h-14 rounded-full flex items-center justify-center shadow-lg border-4 border-white transition-all",
+                active === item.id
+                  ? "gold-gradient text-brand-dark scale-110 shadow-primary/30"
+                  : "bg-brand-dark text-white"
+              )}>
+                <Icon name={item.icon} className="text-2xl" filled={active === item.id} />
+              </div>
+              <span className={cn("text-[9px] font-black", active === item.id ? "text-primary" : "text-slate-400")}>{item.label}</span>
+            </button>
+          );
+        }
+        return (
+          <button
+            key={item.id}
+            onClick={() => onSelect(item.id as View)}
+            className={cn(
+              "flex flex-col items-center gap-1 transition-all relative px-3 py-1 rounded-2xl",
+              active === item.id ? "text-primary" : "text-slate-400 hover:text-slate-600"
+            )}
+          >
+            {active === item.id && (
+              <motion.div
+                layoutId="nav-active"
+                className="absolute inset-0 bg-primary/5 rounded-2xl"
+              />
+            )}
+            <Icon name={item.icon} className="text-2xl relative z-10" filled={active === item.id} />
+            <span className="text-[10px] font-black relative z-10">{item.label}</span>
+          </button>
+        );
+      })}
     </nav>
   );
 };
@@ -312,6 +342,9 @@ const ManagerDashboard = ({ onSelect, onSelectProperty }: { onSelect: (v: View) 
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <button onClick={() => onSelect('ai_assistant')} className="relative p-2.5 rounded-xl bg-primary/20 text-primary hover:bg-primary/30 transition-all" title="المساعد الذكي">
+            <Icon name="auto_awesome" className="text-xl" />
+          </button>
           <button onClick={() => onSelect('notifications')} className="relative p-2.5 rounded-xl bg-white/5 text-white hover:bg-white/10 transition-all">
             <Icon name="notifications" className="text-xl" />
             <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-primary rounded-full border-2 border-brand-dark"></span>
@@ -1955,6 +1988,7 @@ const ReportsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
               { title: 'ربط منصة إيجار', icon: 'sync_alt', view: 'ejar_integration', color: 'text-primary', bg: 'bg-primary/10' },
               { title: 'مركز المطورين (API)', icon: 'terminal', view: 'dev_center', color: 'text-slate-700', bg: 'bg-slate-100' },
               { title: 'نشر المشروع بالذكاء الاصطناعي', icon: 'rocket_launch', view: 'publish', color: 'text-violet-600', bg: 'bg-violet-50' },
+              { title: 'المساعد الذكي (Gemini AI)', icon: 'auto_awesome', view: 'ai_assistant', color: 'text-amber-600', bg: 'bg-amber-50' },
             ].map((item, i) => (
               <motion.button 
                 key={i} 
@@ -2579,6 +2613,278 @@ const TechPerformanceScreen = ({ onSelect }: { onSelect: (v: View) => void }) =>
         ))}
       </main>
       <BottomNav active="manager_dashboard" onSelect={onSelect} />
+    </div>
+  );
+};
+
+// ---- AI Assistant Types ----
+type ChatMessage = {
+  id: string;
+  role: 'user' | 'assistant';
+  text: string;
+  timestamp: Date;
+};
+
+const AI_QUICK_PROMPTS = [
+  { text: 'كم عدد الوحدات الشاغرة؟', icon: 'door_open' },
+  { text: 'ما هي نسبة إشغال العقارات؟', icon: 'donut_large' },
+  { text: 'كيف أُحسّن معدل التحصيل؟', icon: 'trending_up' },
+  { text: 'عقود تنتهي قريباً', icon: 'event_busy' },
+  { text: 'ملخص طلبات الصيانة', icon: 'build_circle' },
+  { text: 'اقترح سعر إيجار مناسب لشقة في الرياض', icon: 'price_check' },
+  { text: 'كيف أعدّل ألوان النظام؟', icon: 'palette' },
+  { text: 'أضف ميزة جديدة للتطبيق', icon: 'extension' },
+];
+
+const PROPERTY_CONTEXT = `
+أنت مساعد ذكاء اصطناعي متخصص لنظام إدارة الأملاك - منصة شركة رمز الإبداع.
+البيانات الحالية في النظام:
+- عدد العقارات: 15 عقار (عمارات، أبراج، فيلات، مجمعات تجارية وسكنية)
+- المستأجرين النشطين: 89 مستأجر
+- الوحدات المؤجرة: 142 وحدة | الوحدات الشاغرة: 12 وحدة
+- نسبة الإشغال: 92%
+- إجمالي التحصيل المالي هذا الشهر: 145,500 ريال سعودي (نمو 12.5%)
+- طلبات الصيانة النشطة: 3 طلبات عاجلة
+- عمليات الزكاة والضريبة: بانتظار التقديم (58,000 ريال)
+- حالة منصة إيجار: متصل ومزامن
+- التقنيات المستخدمة: React 19، TypeScript، Vite، Tailwind CSS، Recharts، Gemini AI
+- المدن: الرياض، جدة، الدمام
+
+أجب باللغة العربية بأسلوب احترافي ومختصر. إذا سُئلت عن تطوير المشروع أو إضافة ميزات، قدّم اقتراحات عملية مع أمثلة كود عند الحاجة.
+`;
+
+const AIAssistantScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: '0',
+      role: 'assistant',
+      text: 'مرحباً! أنا مساعدك الذكي لإدارة الأملاك 🏢\n\nأستطيع مساعدتك في:\n• تحليل بيانات عقاراتك ومستأجريك\n• الإجابة على استفسارات المحاسبة والصيانة\n• اقتراح تحسينات وتطوير للتطبيق\n• تقديم توصيات لزيادة الإيرادات\n\nكيف يمكنني مساعدتك اليوم؟',
+      timestamp: new Date(),
+    },
+  ]);
+  const [inputText, setInputText] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || isLoading) return;
+
+    const userMsg: ChatMessage = {
+      id: Date.now().toString(),
+      role: 'user',
+      text: text.trim(),
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, userMsg]);
+    setInputText('');
+    setIsLoading(true);
+
+    try {
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error('مفتاح GEMINI_API_KEY غير موجود. أضفه في ملف .env.local');
+      }
+      const { GoogleGenAI } = await import('@google/genai');
+      const ai = new GoogleGenAI({ apiKey });
+
+      // Build conversation history for context
+      const history = messages.slice(1).map(m => ({
+        role: (m.role === 'user' ? 'user' : 'model') as 'user' | 'model',
+        parts: [{ text: m.text }],
+      }));
+
+      const result = await ai.models.generateContent({
+        model: 'gemini-2.0-flash',
+        contents: [
+          ...history,
+          { role: 'user', parts: [{ text: text.trim() }] },
+        ],
+        config: { systemInstruction: PROPERTY_CONTEXT },
+      });
+
+      const assistantMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        text: result.text ?? 'لم أتمكن من الحصول على إجابة. يرجى المحاولة مرة أخرى.',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, assistantMsg]);
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : 'حدث خطأ غير متوقع';
+      const errorMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        text: `⚠️ ${errMsg}`,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMsg]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const formatTime = (d: Date) =>
+    d.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+
+  return (
+    <div className="min-h-screen bg-[#f8f8f5] flex flex-col">
+      {/* Header */}
+      <header className="flex items-center justify-between p-4 bg-brand-dark sticky top-0 z-10 shadow-lg">
+        <button onClick={() => onSelect('manager_dashboard')} className="p-2 rounded-full hover:bg-white/10 transition-colors">
+          <Icon name="arrow_forward" className="text-2xl text-white" />
+        </button>
+        <div className="flex items-center gap-3 flex-1 justify-center pr-4">
+          <div className="w-9 h-9 gold-gradient rounded-full flex items-center justify-center shadow-md">
+            <Icon name="auto_awesome" className="text-brand-dark text-lg" filled />
+          </div>
+          <div>
+            <h2 className="text-base font-black text-white leading-none">المساعد الذكي</h2>
+            <p className="text-[9px] text-slate-400 font-bold mt-0.5">مدعوم بـ Gemini AI • رمز الإبداع</p>
+          </div>
+        </div>
+        <button
+          onClick={() => setMessages(prev => [prev[0]])}
+          className="p-2 rounded-full hover:bg-white/10 transition-colors"
+          title="مسح المحادثة"
+        >
+          <Icon name="delete_sweep" className="text-xl text-slate-400" />
+        </button>
+      </header>
+
+      {/* Messages */}
+      <main className="flex-1 overflow-y-auto p-4 space-y-4 pb-48">
+        <AnimatePresence initial={false}>
+          {messages.map((msg) => (
+            <motion.div
+              key={msg.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className={cn("flex gap-3", msg.role === 'user' ? "flex-row-reverse" : "flex-row")}
+            >
+              {/* Avatar */}
+              <div className={cn(
+                "w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-1",
+                msg.role === 'assistant'
+                  ? "gold-gradient text-brand-dark shadow-sm"
+                  : "bg-brand-dark text-white"
+              )}>
+                <Icon
+                  name={msg.role === 'assistant' ? 'auto_awesome' : 'person'}
+                  className="text-sm"
+                  filled
+                />
+              </div>
+
+              {/* Bubble */}
+              <div className={cn(
+                "max-w-[80%] space-y-1",
+                msg.role === 'user' ? "items-end" : "items-start"
+              )}>
+                <div className={cn(
+                  "px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap shadow-sm",
+                  msg.role === 'assistant'
+                    ? "bg-white border border-gray-100 text-slate-800 rounded-tr-none"
+                    : "bg-brand-dark text-white rounded-tl-none"
+                )}>
+                  {msg.text}
+                </div>
+                <p className={cn(
+                  "text-[9px] text-slate-400 px-1",
+                  msg.role === 'user' ? "text-right" : "text-right"
+                )}>
+                  {formatTime(msg.timestamp)}
+                </p>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+
+        {/* Typing indicator */}
+        {isLoading && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex gap-3"
+          >
+            <div className="w-8 h-8 rounded-full gold-gradient text-brand-dark flex items-center justify-center shrink-0 mt-1 shadow-sm">
+              <Icon name="auto_awesome" className="text-sm" filled />
+            </div>
+            <div className="bg-white border border-gray-100 px-4 py-3 rounded-2xl rounded-tr-none shadow-sm flex items-center gap-1">
+              {[0, 1, 2].map(i => (
+                <div
+                  key={i}
+                  className="w-2 h-2 bg-primary rounded-full animate-bounce"
+                  style={{ animationDelay: `${i * 0.15}s` }}
+                />
+              ))}
+            </div>
+          </motion.div>
+        )}
+        <div ref={messagesEndRef} />
+      </main>
+
+      {/* Quick Prompts + Input */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 pb-6 shadow-[0_-10px_30px_rgba(0,0,0,0.06)]">
+        {/* Quick Prompts strip */}
+        <div className="flex gap-2 overflow-x-auto px-4 pt-3 pb-2 no-scrollbar">
+          {AI_QUICK_PROMPTS.map((p, i) => (
+            <button
+              key={i}
+              onClick={() => sendMessage(p.text)}
+              disabled={isLoading}
+              className="shrink-0 flex items-center gap-1.5 text-[10px] font-bold bg-slate-50 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-full hover:bg-primary/10 hover:border-primary/30 hover:text-primary disabled:opacity-40 transition-colors"
+            >
+              <Icon name={p.icon} className="text-[12px]" />
+              {p.text}
+            </button>
+          ))}
+        </div>
+
+        {/* Text Input */}
+        <div className="flex items-end gap-3 px-4 pt-1">
+          <div className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 flex items-end gap-2 focus-within:border-primary/50 focus-within:bg-white transition-colors">
+            <textarea
+              value={inputText}
+              onChange={e => setInputText(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage(inputText);
+                }
+              }}
+              placeholder="اكتب سؤالك هنا... (Enter للإرسال)"
+              rows={1}
+              className="flex-1 text-sm text-slate-800 placeholder-slate-400 resize-none outline-none bg-transparent max-h-28"
+              style={{ overflowY: 'auto' }}
+            />
+          </div>
+          <button
+            onClick={() => sendMessage(inputText)}
+            disabled={isLoading || !inputText.trim()}
+            className={cn(
+              "w-12 h-12 rounded-2xl flex items-center justify-center transition-all shrink-0 shadow-md",
+              isLoading || !inputText.trim()
+                ? "bg-slate-200 text-slate-400"
+                : "gold-gradient text-brand-dark hover:shadow-primary/30"
+            )}
+          >
+            {isLoading
+              ? <span className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+              : <Icon name="send" className="text-xl" filled />
+            }
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
@@ -3663,6 +3969,7 @@ export default function App() {
       case 'vendors_management': return <VendorsManagementScreen onSelect={setCurrentView} />;
       case 'asset_management': return <AssetManagementScreen onSelect={setCurrentView} />;
       case 'publish': return <PublishingScreen onSelect={setCurrentView} />;
+      case 'ai_assistant': return <AIAssistantScreen onSelect={setCurrentView} />;
       default: return <WelcomeScreen onSelect={setCurrentView} />;
     }
   };
