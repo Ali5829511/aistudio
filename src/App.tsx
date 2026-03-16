@@ -691,6 +691,7 @@ const ManagerDashboard = ({ onSelect, onSelectProperty }: { onSelect: (v: View) 
               { label: 'الوحدات', icon: 'door_front', bg: 'bg-violet-50', color: 'text-violet-600', badge: toArabicDigits(UNITS.length), view: 'units' },
               { label: 'الموردون', icon: 'engineering', bg: 'bg-orange-50', color: 'text-orange-600', badge: '٣', view: 'vendors_management' },
               { label: 'الأصول', icon: 'inventory', bg: 'bg-rose-50', color: 'text-rose-600', badge: '٤', view: 'asset_management' },
+              { label: 'التقارير', icon: 'bar_chart', bg: 'bg-sky-50', color: 'text-sky-600', badge: toArabicDigits(10), view: 'reports' },
             ].map((item, i) => (
               <motion.button
                 key={i}
