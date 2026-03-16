@@ -52,7 +52,9 @@ type View =
   | 'ai_assistant'
   | 'payment'
   | 'owner_dashboard'
-  | 'tech_portal';
+  | 'tech_portal'
+  | 'msg_templates'
+  | 'property_forms';
 
 // --- Constants & Mock Data ---
 
@@ -199,6 +201,40 @@ const VENDORS = [
   { id: '4', name: 'شركة الدهانات الذهبية', service: 'دهانات وديكور', type: 'دهانات', rating: 4.6, status: 'available', phone: '966500000004', jobs: 15, city: 'جدة' },
   { id: '5', name: 'مكافحة الآفات السريعة', service: 'مكافحة آفات', type: 'مكافحة', rating: 4.3, status: 'busy', phone: '966500000005', jobs: 9, city: 'الدمام' },
   { id: '6', name: 'صيانة مصاعد الخليج', service: 'صيانة مصاعد', type: 'مصاعد', rating: 4.9, status: 'available', phone: '966500000006', jobs: 41, city: 'الرياض' },
+];
+
+const MSG_TEMPLATES = [
+  // Contract templates
+  { id: '1', category: 'عقود', recipient: 'مستأجر', title: 'ترحيب بمستأجر جديد', preview: 'أهلاً وسهلاً بكم في [اسم العقار]. نسعد بانضمامكم كمستأجر جديد في الوحدة [رقم الوحدة]. نود إعلامكم بأن عقد الإيجار بدأ بتاريخ [تاريخ البدء] ويمتد حتى [تاريخ الانتهاء]. يسعدنا خدمتكم دائماً. إدارة العقار.', icon: 'celebration', color: 'text-green-600', bg: 'bg-green-50', auto: false },
+  { id: '2', category: 'عقود', recipient: 'مستأجر', title: 'تذكير انتهاء العقد (30 يوم)', preview: 'عزيزي المستأجر [اسم المستأجر]، نودّ إعلامكم بأن عقد إيجار الوحدة [رقم الوحدة] في [اسم العقار] سينتهي بعد 30 يوماً بتاريخ [تاريخ الانتهاء]. يرجى التواصل معنا لتجديد العقد أو تحديد موعد الإخلاء. إدارة العقار.', icon: 'event_upcoming', color: 'text-amber-600', bg: 'bg-amber-50', auto: true },
+  { id: '3', category: 'عقود', recipient: 'مستأجر', title: 'تذكير انتهاء العقد (7 أيام)', preview: 'عزيزي المستأجر [اسم المستأجر]، تذكير هام: ينتهي عقد إيجاركم للوحدة [رقم الوحدة] خلال 7 أيام فقط. يرجى الاتصال بنا عاجلاً على الرقم [رقم الهاتف] لتجديد العقد أو الإفادة بقرار المغادرة.', icon: 'event_busy', color: 'text-red-600', bg: 'bg-red-50', auto: true },
+  { id: '4', category: 'عقود', recipient: 'مستأجر', title: 'عرض تجديد العقد', preview: 'عزيزي المستأجر [اسم المستأجر]، يسعدنا دعوتكم لتجديد عقد الإيجار للسنة القادمة بنفس الشروط. الإيجار الشهري: [المبلغ] ر.س. إذا كنتم مهتمين، يرجى الرد على هذه الرسالة خلال 10 أيام. شكراً لثقتكم بنا.', icon: 'autorenew', color: 'text-blue-600', bg: 'bg-blue-50', auto: false },
+  { id: '5', category: 'عقود', recipient: 'مالك', title: 'إشعار تجديد عقد للمالك', preview: 'أصحاب السعادة [اسم المالك]، نحيطكم علماً بأن عقد إيجار الوحدة [رقم الوحدة] بعقاركم [اسم العقار] سيُجدَّد اعتباراً من [تاريخ التجديد] بقيمة إيجار شهري [المبلغ] ر.س. سيتم تحويل العائد في الموعد المعتاد. إدارة شركة رمز الإبداع.', icon: 'real_estate_agent', color: 'text-emerald-600', bg: 'bg-emerald-50', auto: true },
+  { id: '6', category: 'عقود', recipient: 'مالك', title: 'تقرير أداء العقار الشهري', preview: 'أصحاب السعادة [اسم المالك]، نقدم لكم ملخص أداء عقاراتكم لشهر [الشهر]: إجمالي الإيرادات: [المبلغ] ر.س، الوحدات المؤجرة: [العدد]، طلبات الصيانة المغلقة: [العدد]. يمكنكم الاطلاع على التفاصيل الكاملة عبر التطبيق.', icon: 'analytics', color: 'text-indigo-600', bg: 'bg-indigo-50', auto: true },
+  // Payment templates
+  { id: '7', category: 'مالية', recipient: 'مستأجر', title: 'تذكير سداد الإيجار الشهري', preview: 'عزيزي المستأجر [اسم المستأجر]، نذكّركم بأن إيجار شهر [الشهر] للوحدة [رقم الوحدة] بمبلغ [المبلغ] ر.س لم يُسدَّد حتى تاريخ [التاريخ]. يرجى السداد خلال 3 أيام لتجنب الغرامات. شكراً.', icon: 'payments', color: 'text-rose-600', bg: 'bg-rose-50', auto: true },
+  { id: '8', category: 'مالية', recipient: 'مستأجر', title: 'تأكيد استلام الدفعة', preview: 'نؤكد لكم استلام دفعة الإيجار بتاريخ [التاريخ] بقيمة [المبلغ] ر.س للوحدة [رقم الوحدة]. رقم الإيصال: [الرقم]. نشكركم على الالتزام بالسداد في الموعد المحدد. إدارة العقار.', icon: 'receipt_long', color: 'text-green-600', bg: 'bg-green-50', auto: false },
+  { id: '9', category: 'مالية', recipient: 'مستأجر', title: 'إشعار تأخر السداد', preview: 'عزيزي المستأجر [اسم المستأجر]، تنبيه: لم يُسدَّد إيجار شهر [الشهر] حتى الآن. المبلغ المستحق: [المبلغ] ر.س + غرامة تأخير [قيمة الغرامة] ر.س. يرجى السداد فوراً لتجنب الإجراءات القانونية. للاستفسار: [رقم الهاتف].', icon: 'warning_amber', color: 'text-red-600', bg: 'bg-red-50', auto: true },
+  { id: '10', category: 'مالية', recipient: 'مالك', title: 'إشعار تحويل العائد الشهري', preview: 'أصحاب السعادة [اسم المالك]، يسعدنا إعلامكم بتحويل عائد شهر [الشهر] لعقاراتكم بإجمالي [المبلغ] ر.س إلى حسابكم البنكي المسجل. رقم العملية: [الرقم]. يرجى مراجعة كشف الحساب.', icon: 'account_balance', color: 'text-teal-600', bg: 'bg-teal-50', auto: true },
+  // Maintenance templates
+  { id: '11', category: 'صيانة', recipient: 'مستأجر', title: 'تأكيد استلام طلب الصيانة', preview: 'عزيزي المستأجر [اسم المستأجر]، تأكيداً لاستلام طلب صيانة رقم [الرقم] الخاص بـ [نوع العطل] في الوحدة [رقم الوحدة]. سيتواصل معكم الفني [اسم الفني] قريباً لتحديد موعد الزيارة.', icon: 'build_circle', color: 'text-orange-600', bg: 'bg-orange-50', auto: true },
+  { id: '12', category: 'صيانة', recipient: 'مستأجر', title: 'جدولة موعد الصيانة', preview: 'عزيزي المستأجر، تم جدولة زيارة الصيانة لطلبكم رقم [الرقم] يوم [اليوم] الموافق [التاريخ] بين الساعة [من] و [حتى]. يرجى التأكد من وجودكم أو وجود شخص بالغ في الوحدة.', icon: 'calendar_clock', color: 'text-blue-600', bg: 'bg-blue-50', auto: false },
+  { id: '13', category: 'صيانة', recipient: 'مستأجر', title: 'إغلاق طلب الصيانة', preview: 'عزيزي المستأجر [اسم المستأجر]، يسعدنا إعلامكم بإنجاز طلب الصيانة رقم [الرقم] الخاص بـ [نوع العطل] وإغلاقه بنجاح. نتطلع إلى خدمتكم دائماً. إدارة العقار.', icon: 'task_alt', color: 'text-green-600', bg: 'bg-green-50', auto: true },
+  // General templates
+  { id: '14', category: 'عام', recipient: 'الجميع', title: 'إشعار الفحص الدوري', preview: 'عزيزي المستأجر [اسم المستأجر]، نودّ إعلامكم بأنه سيُجرى الفحص الدوري للوحدة [رقم الوحدة] يوم [اليوم] الموافق [التاريخ]. يهدف الفحص إلى التأكد من سلامة المبنى. شكراً لتعاونكم.', icon: 'manage_search', color: 'text-purple-600', bg: 'bg-purple-50', auto: false },
+  { id: '15', category: 'عام', recipient: 'الجميع', title: 'إشعار صيانة المبنى', preview: 'عزيزي السكان، نعلمكم بأنه ستُجرى أعمال صيانة للمبنى يوم [اليوم] من الساعة [من] إلى [حتى] وقد يؤثر ذلك على [الخدمات المتأثرة]. نعتذر عن أي إزعاج. إدارة المبنى.', icon: 'engineering', color: 'text-slate-600', bg: 'bg-slate-100', auto: false },
+  { id: '16', category: 'عام', recipient: 'مستأجر', title: 'طلب استبيان رضا المستأجر', preview: 'عزيزي المستأجر [اسم المستأجر]، نقدّر رأيكم! يرجى تخصيص دقيقتين للإجابة على استبيان رضا المستأجرين. مشاركتكم تساعدنا على تقديم خدمة أفضل. رابط الاستبيان: [الرابط]', icon: 'star_rate', color: 'text-amber-600', bg: 'bg-amber-50', auto: false },
+];
+
+const PROPERTY_FORMS = [
+  { id: '1', title: 'نموذج استلام وتسليم الوحدة', desc: 'محضر رسمي عند بداية ونهاية الإيجار', category: 'عقارات', icon: 'handshake', color: 'text-blue-600', bg: 'bg-blue-50', fields: [{ label: 'حالة الجدران', type: 'select', options: ['ممتازة', 'جيدة', 'تحتاج صيانة'] }, { label: 'حالة الأرضيات', type: 'select', options: ['ممتازة', 'جيدة', 'تحتاج صيانة'] }, { label: 'حالة الأجهزة', type: 'select', options: ['تعمل جميعها', 'بعضها معطل', 'لا توجد أجهزة'] }, { label: 'حالة التمديدات الكهربائية', type: 'select', options: ['سليمة', 'بحاجة فحص', 'بحاجة إصلاح'] }, { label: 'حالة السباكة', type: 'select', options: ['سليمة', 'بحاجة فحص', 'بحاجة إصلاح'] }, { label: 'ملاحظات إضافية', type: 'textarea' }] },
+  { id: '2', title: 'نموذج إشعار إخلاء الوحدة', desc: 'إشعار رسمي للمستأجر بضرورة الإخلاء', category: 'عقارات', icon: 'exit_to_app', color: 'text-red-600', bg: 'bg-red-50', fields: [{ label: 'اسم المستأجر', type: 'text' }, { label: 'رقم الوحدة', type: 'text' }, { label: 'سبب الإخلاء', type: 'select', options: ['انتهاء العقد', 'مخالفة الشروط', 'عدم السداد', 'أعمال بناء', 'أخرى'] }, { label: 'تاريخ الإخلاء المطلوب', type: 'date' }, { label: 'ملاحظات', type: 'textarea' }] },
+  { id: '3', title: 'نموذج الفحص الدوري', desc: 'سجل فحص دوري لحالة الوحدة', category: 'صيانة', icon: 'fact_check', color: 'text-purple-600', bg: 'bg-purple-50', fields: [{ label: 'تاريخ الفحص', type: 'date' }, { label: 'المفتش المسؤول', type: 'text' }, { label: 'حالة الكهرباء', type: 'select', options: ['سليمة', 'بحاجة فحص', 'بحاجة إصلاح'] }, { label: 'حالة السباكة', type: 'select', options: ['سليمة', 'بحاجة فحص', 'بحاجة إصلاح'] }, { label: 'حالة التكييف', type: 'select', options: ['يعمل', 'بحاجة صيانة', 'معطل'] }, { label: 'الأمان والسلامة', type: 'select', options: ['مطابق', 'يحتاج تحسين', 'غير مطابق'] }, { label: 'ملاحظات المفتش', type: 'textarea' }] },
+  { id: '4', title: 'نموذج الزيادة في الإيجار', desc: 'إشعار رسمي بزيادة قيمة الإيجار', category: 'مالية', icon: 'trending_up', color: 'text-emerald-600', bg: 'bg-emerald-50', fields: [{ label: 'اسم المستأجر', type: 'text' }, { label: 'قيمة الإيجار الحالية (ر.س)', type: 'number' }, { label: 'قيمة الإيجار الجديدة (ر.س)', type: 'number' }, { label: 'نسبة الزيادة (%)', type: 'number' }, { label: 'تاريخ تطبيق الزيادة', type: 'date' }, { label: 'مرفقات (لائحة وزارة الإسكان)', type: 'file' }] },
+  { id: '5', title: 'نموذج طلب صيانة رسمي', desc: 'توثيق طلب صيانة من إدارة العقار', category: 'صيانة', icon: 'build', color: 'text-orange-600', bg: 'bg-orange-50', fields: [{ label: 'نوع العطل', type: 'select', options: ['سباكة', 'كهرباء', 'تكييف', 'دهانات', 'نجارة', 'أخرى'] }, { label: 'درجة الأولوية', type: 'select', options: ['عاجل', 'متوسط', 'عادي'] }, { label: 'وصف المشكلة', type: 'textarea' }, { label: 'التكلفة التقديرية (ر.س)', type: 'number' }, { label: 'المورد المختار', type: 'select', options: VENDORS.map(v => v.name) }] },
+  { id: '6', title: 'نموذج استبيان رضا المستأجرين', desc: 'قياس مستوى رضا السكان عن الخدمات', category: 'خدمات', icon: 'poll', color: 'text-amber-600', bg: 'bg-amber-50', fields: [{ label: 'تقييم جودة الخدمة (1-5)', type: 'select', options: ['5 - ممتاز', '4 - جيد جداً', '3 - جيد', '2 - مقبول', '1 - ضعيف'] }, { label: 'سرعة الاستجابة (1-5)', type: 'select', options: ['5 - ممتاز', '4 - جيد جداً', '3 - جيد', '2 - مقبول', '1 - ضعيف'] }, { label: 'مستوى النظافة (1-5)', type: 'select', options: ['5 - ممتاز', '4 - جيد جداً', '3 - جيد', '2 - مقبول', '1 - ضعيف'] }, { label: 'الأمن والسلامة (1-5)', type: 'select', options: ['5 - ممتاز', '4 - جيد جداً', '3 - جيد', '2 - مقبول', '1 - ضعيف'] }, { label: 'هل تنصح بعقارنا للآخرين؟', type: 'select', options: ['نعم بالتأكيد', 'ربما', 'لا'] }, { label: 'ملاحظات واقتراحات', type: 'textarea' }] },
+  { id: '7', title: 'نموذج الشكوى والاقتراح', desc: 'استقبال شكاوى واقتراحات المستأجرين', category: 'خدمات', icon: 'feedback', color: 'text-pink-600', bg: 'bg-pink-50', fields: [{ label: 'نوع البلاغ', type: 'select', options: ['شكوى', 'اقتراح', 'استفسار', 'طلب خدمة'] }, { label: 'القسم المعني', type: 'select', options: ['إدارة العقار', 'الصيانة', 'الأمن', 'النظافة', 'الإيجار', 'أخرى'] }, { label: 'تفاصيل البلاغ', type: 'textarea' }, { label: 'مرفقات (صور)', type: 'file' }] },
+  { id: '8', title: 'نموذج إشعار انتهاء العقد (من المستأجر)', desc: 'إشعار رسمي من المستأجر بنيته الإخلاء', category: 'عقارات', icon: 'event_available', color: 'text-violet-600', bg: 'bg-violet-50', fields: [{ label: 'اسم المستأجر', type: 'text' }, { label: 'رقم الوحدة', type: 'text' }, { label: 'تاريخ الإخلاء المتوقع', type: 'date' }, { label: 'سبب المغادرة', type: 'select', options: ['انتهاء العقد', 'تغيير محل الإقامة', 'شراء مسكن', 'أسباب عائلية', 'أخرى'] }, { label: 'ملاحظات', type: 'textarea' }] },
 ];
 
 // --- Shared Components ---
@@ -2128,6 +2164,33 @@ const ReportsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
             ))}
           </div>
         </section>
+
+        <section className="space-y-3">
+          <h3 className="text-sm font-bold text-gray-400 px-1">الإشعارات والنماذج</h3>
+          <div className="grid grid-cols-1 gap-3">
+            {[
+              { title: 'قوالب الرسائل الآلية', desc: 'رسائل العقود والمدفوعات والصيانة للملاك والمستأجرين', icon: 'mark_email_unread', view: 'msg_templates', color: 'text-sky-600', bg: 'bg-sky-50' },
+              { title: 'نماذج وإشعارات العقارات', desc: 'استلام وتسليم، فحص دوري، إخلاء، وزيادة الإيجار', icon: 'description', view: 'property_forms', color: 'text-rose-600', bg: 'bg-rose-50' },
+            ].map((item, i) => (
+              <motion.button
+                key={i}
+                whileHover={{ scale: 1.02, x: -4 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => onSelect(item.view as View)}
+                className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 text-right transition-all"
+              >
+                <div className={`w-12 h-12 rounded-xl ${item.bg} ${item.color} flex items-center justify-center shrink-0`}>
+                  <Icon name={item.icon} />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-bold text-sm">{item.title}</h4>
+                  <p className="text-[10px] text-gray-400">{item.desc}</p>
+                </div>
+                <Icon name="chevron_left" className="text-gray-300" />
+              </motion.button>
+            ))}
+          </div>
+        </section>
       </main>
       <BottomNav active="manager_dashboard" onSelect={onSelect} />
     </div>
@@ -2273,9 +2336,9 @@ const OwnersManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) =
         <button onClick={() => onSelect('manager_dashboard')} className="p-2 rounded-full hover:bg-slate-100 transition-colors">
           <Icon name="arrow_forward" className="text-2xl" />
         </button>
-        <h2 className="text-lg font-bold flex-1 text-center pr-12">إدارة الملاك</h2>
-        <button className="p-2 bg-primary/10 text-primary rounded-full">
-          <Icon name="person_add" />
+        <h2 className="text-lg font-bold flex-1 text-center">إدارة الملاك</h2>
+        <button aria-label="فتح قوالب الرسائل" onClick={() => onSelect('msg_templates')} className="p-2 bg-primary/10 text-primary rounded-xl flex items-center gap-1 text-[10px] font-black hover:bg-primary/20 transition-colors">
+          <Icon name="mail_outline" className="text-base" /> قوالب
         </button>
       </header>
       <main className="p-4 space-y-4">
@@ -2421,9 +2484,9 @@ const ContractsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }
         <button onClick={() => onSelect('manager_dashboard')} className="p-2 rounded-full hover:bg-slate-100 transition-colors">
           <Icon name="arrow_forward" className="text-2xl" />
         </button>
-        <h2 className="text-lg font-bold flex-1 text-center pr-12">إدارة العقود</h2>
-        <button className="p-2 bg-primary/10 text-primary rounded-full">
-          <Icon name="add" />
+        <h2 className="text-lg font-bold flex-1 text-center">إدارة العقود</h2>
+        <button aria-label="فتح قوالب الرسائل" onClick={() => onSelect('msg_templates')} className="p-2 bg-primary/10 text-primary rounded-xl flex items-center gap-1 text-[10px] font-black hover:bg-primary/20 transition-colors">
+          <Icon name="mail_outline" className="text-base" /> قوالب
         </button>
       </header>
       <main className="p-4 space-y-4">
@@ -3785,9 +3848,9 @@ const TenantsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) 
         <button onClick={() => onSelect('manager_dashboard')} className="p-2 rounded-full hover:bg-slate-100 transition-colors">
           <Icon name="arrow_forward" className="text-2xl" />
         </button>
-        <h2 className="text-lg font-bold flex-1 text-center pr-12">إدارة المستأجرين</h2>
-        <button className="p-2 bg-primary/10 text-primary rounded-full">
-          <Icon name="person_add" />
+        <h2 className="text-lg font-bold flex-1 text-center">إدارة المستأجرين</h2>
+        <button aria-label="فتح قوالب الرسائل" onClick={() => onSelect('msg_templates')} className="p-2 bg-primary/10 text-primary rounded-xl flex items-center gap-1 text-[10px] font-black hover:bg-primary/20 transition-colors">
+          <Icon name="mail_outline" className="text-base" /> قوالب
         </button>
       </header>
       <main className="p-4 space-y-4">
@@ -5172,6 +5235,534 @@ const PaymentScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
   );
 };
 
+// --- Message Templates Screen ---
+
+const MessageTemplatesScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const [activeCategory, setActiveCategory] = useState('الكل');
+  const [sendModal, setSendModal] = useState<typeof MSG_TEMPLATES[0] | null>(null);
+  const [previewModal, setPreviewModal] = useState<typeof MSG_TEMPLATES[0] | null>(null);
+  const [sendSuccess, setSendSuccess] = useState(false);
+  const [selectedRecipient, setSelectedRecipient] = useState('');
+  const [selectedChannel, setSelectedChannel] = useState('SMS');
+
+  const categories = ['الكل', 'عقود', 'مالية', 'صيانة', 'عام'];
+  const filtered = activeCategory === 'الكل' ? MSG_TEMPLATES : MSG_TEMPLATES.filter(t => t.category === activeCategory);
+
+  const recipientBadge = (r: string) => {
+    if (r === 'مستأجر') return 'bg-blue-50 text-blue-600';
+    if (r === 'مالك') return 'bg-emerald-50 text-emerald-600';
+    return 'bg-slate-100 text-slate-500';
+  };
+
+  const handleSend = () => {
+    setSendSuccess(true);
+    setTimeout(() => {
+      setSendSuccess(false);
+      setSendModal(null);
+      setSelectedRecipient('');
+      setSelectedChannel('SMS');
+    }, 1800);
+  };
+
+  const categoryCount = (cat: string) => cat === 'الكل'
+    ? MSG_TEMPLATES.length
+    : MSG_TEMPLATES.filter(t => t.category === cat).length;
+
+  return (
+    <div className="min-h-screen bg-[#f8f8f5] pb-24">
+      <header className="flex items-center justify-between p-4 bg-brand-dark sticky top-0 z-30 shadow-xl">
+        <button onClick={() => onSelect('manager_dashboard')} className="flex size-10 items-center justify-center rounded-xl bg-white/5 text-white hover:bg-white/10 transition-all">
+          <Icon name="arrow_forward" className="text-2xl" />
+        </button>
+        <div className="text-center">
+          <h2 className="text-base font-black text-white">قوالب الرسائل الآلية</h2>
+          <p className="text-[10px] text-primary font-bold">{toArabicDigits(MSG_TEMPLATES.length)} قالب جاهز</p>
+        </div>
+        <div className="flex size-10 items-center justify-center rounded-xl gold-gradient text-brand-dark shadow-lg shadow-primary/20">
+          <Icon name="mail_outline" className="text-xl" />
+        </div>
+      </header>
+
+      <main className="p-4 space-y-5">
+        {/* Stats */}
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { label: 'العقود', count: MSG_TEMPLATES.filter(t => t.category === 'عقود').length, icon: 'history_edu', color: 'text-blue-600', bg: 'bg-blue-50' },
+            { label: 'المالية', count: MSG_TEMPLATES.filter(t => t.category === 'مالية').length, icon: 'payments', color: 'text-rose-600', bg: 'bg-rose-50' },
+            { label: 'الصيانة', count: MSG_TEMPLATES.filter(t => t.category === 'صيانة').length, icon: 'build', color: 'text-orange-600', bg: 'bg-orange-50' },
+            { label: 'عام', count: MSG_TEMPLATES.filter(t => t.category === 'عام').length, icon: 'campaign', color: 'text-purple-600', bg: 'bg-purple-50' },
+          ].map((s, i) => (
+            <div key={i} className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center gap-1.5">
+              <div className={cn("size-8 rounded-xl flex items-center justify-center", s.bg, s.color)}>
+                <Icon name={s.icon} className="text-base" />
+              </div>
+              <p className="text-lg font-black text-brand-dark">{toArabicDigits(s.count)}</p>
+              <p className="text-[9px] font-bold text-slate-400">{s.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Auto notice */}
+        <div className="bg-primary/10 border border-primary/20 p-3 rounded-xl flex items-center gap-3">
+          <div className="size-8 bg-primary/20 rounded-lg flex items-center justify-center shrink-0 text-primary">
+            <Icon name="auto_mode" className="text-base" />
+          </div>
+          <p className="text-xs font-bold text-brand-dark">القوالب المميزة بـ <span className="text-primary">آلي</span> تُرسَل تلقائياً عند تحقق الشرط (انتهاء عقد، تأخر سداد، إلخ)</p>
+        </div>
+
+        {/* Category tabs */}
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className={cn(
+                "whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5",
+                activeCategory === cat
+                  ? 'bg-brand-dark text-white shadow-md'
+                  : 'bg-white border border-gray-100 text-gray-500 hover:bg-slate-50'
+              )}
+            >
+              {cat}
+              <span className={cn("text-[9px] font-black px-1.5 py-0.5 rounded-full", activeCategory === cat ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500')}>
+                {toArabicDigits(categoryCount(cat))}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Templates list */}
+        <AnimatePresence mode="popLayout">
+          {filtered.map((tmpl) => (
+            <motion.div
+              key={tmpl.id}
+              layout
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+            >
+              <div className="p-4">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className={cn("size-11 rounded-xl flex items-center justify-center shrink-0", tmpl.bg, tmpl.color)}>
+                    <Icon name={tmpl.icon} className="text-xl" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <h4 className="font-black text-sm text-brand-dark">{tmpl.title}</h4>
+                      {tmpl.auto && (
+                        <span className="text-[8px] font-black bg-primary/10 text-primary px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                          <Icon name="auto_mode" className="text-[10px]" /> آلي
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={cn("text-[9px] font-black px-2 py-0.5 rounded-full", recipientBadge(tmpl.recipient))}>
+                        {tmpl.recipient}
+                      </span>
+                      <span className="text-[9px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">{tmpl.category}</span>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-relaxed line-clamp-2 bg-slate-50 p-2 rounded-lg">{tmpl.preview}</p>
+              </div>
+              <div className="border-t border-gray-50 grid grid-cols-2 divide-x divide-gray-50">
+                <button
+                  onClick={() => setPreviewModal(tmpl)}
+                  className="py-3 text-xs font-bold text-slate-500 flex items-center justify-center gap-1.5 hover:bg-slate-50 transition-colors"
+                >
+                  <Icon name="visibility" className="text-sm" /> معاينة كاملة
+                </button>
+                <button
+                  onClick={() => setSendModal(tmpl)}
+                  className={cn("py-3 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors", tmpl.color, "hover:opacity-80")}
+                >
+                  <Icon name="send" className="text-sm" /> إرسال
+                </button>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </main>
+
+      {/* Preview Modal */}
+      <AnimatePresence>
+        {previewModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center p-4"
+            onClick={() => setPreviewModal(null)}
+          >
+            <motion.div
+              initial={{ y: 80, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 80, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white rounded-3xl w-full max-w-lg p-6 shadow-2xl"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className={cn("size-12 rounded-xl flex items-center justify-center", previewModal.bg, previewModal.color)}>
+                  <Icon name={previewModal.icon} className="text-2xl" />
+                </div>
+                <div>
+                  <h3 className="font-black text-brand-dark">{previewModal.title}</h3>
+                  <div className="flex gap-2 mt-1">
+                    <span className={cn("text-[9px] font-black px-2 py-0.5 rounded-full", recipientBadge(previewModal.recipient))}>{previewModal.recipient}</span>
+                    <span className="text-[9px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">{previewModal.category}</span>
+                    {previewModal.auto && <span className="text-[9px] font-black bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">آلي</span>}
+                  </div>
+                </div>
+              </div>
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-4">
+                <p className="text-sm text-slate-600 leading-loose font-medium">{previewModal.preview}</p>
+              </div>
+              <p className="text-[10px] text-slate-400 text-center mb-4">القيم داخل [الأقواس] ستُعوَّض تلقائياً بالبيانات الفعلية عند الإرسال</p>
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => setPreviewModal(null)} className="py-3 rounded-xl border border-gray-200 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-colors">إغلاق</button>
+                <button onClick={() => { setPreviewModal(null); setSendModal(previewModal); }} className={cn("py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 shadow-lg", "bg-brand-dark")}>
+                  <Icon name="send" className="text-sm" /> إرسال الآن
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Send Modal */}
+      <AnimatePresence>
+        {sendModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center p-4"
+            onClick={() => { if (!sendSuccess) setSendModal(null); }}
+          >
+            <motion.div
+              initial={{ y: 80, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 80, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white rounded-3xl w-full max-w-lg p-6 shadow-2xl"
+            >
+              {sendSuccess ? (
+                <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex flex-col items-center py-6 text-center">
+                  <div className="size-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4">
+                    <Icon name="check_circle" className="text-5xl" />
+                  </div>
+                  <h3 className="text-xl font-black text-brand-dark mb-1">تم الإرسال بنجاح!</h3>
+                  <p className="text-sm text-slate-500">تم إرسال الرسالة إلى المستلمين المحددين</p>
+                </motion.div>
+              ) : (
+                <>
+                  <h3 className="font-black text-brand-dark text-lg mb-1">إرسال الرسالة</h3>
+                  <p className="text-xs text-slate-400 mb-5">{sendModal.title}</p>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-xs font-bold text-slate-600 mb-2 block">اختر المستلمين</label>
+                      <div className="space-y-2">
+                        {sendModal.recipient === 'الجميع' ? (
+                          ['جميع المستأجرين', 'جميع الملاك', 'مستأجرو عقار محدد', 'مستأجر واحد'].map((opt) => (
+                            <button key={opt} onClick={() => setSelectedRecipient(opt)} className={cn("w-full p-3 rounded-xl border text-sm font-bold text-right transition-all", selectedRecipient === opt ? 'border-primary bg-primary/5 text-primary' : 'border-gray-100 text-slate-600 hover:bg-slate-50')}>
+                              {opt}
+                            </button>
+                          ))
+                        ) : sendModal.recipient === 'مستأجر' ? (
+                          ['جميع المستأجرين', 'مستأجرو عقار محدد', 'مستأجر واحد محدد'].map((opt) => (
+                            <button key={opt} onClick={() => setSelectedRecipient(opt)} className={cn("w-full p-3 rounded-xl border text-sm font-bold text-right transition-all", selectedRecipient === opt ? 'border-primary bg-primary/5 text-primary' : 'border-gray-100 text-slate-600 hover:bg-slate-50')}>
+                              {opt}
+                            </button>
+                          ))
+                        ) : (
+                          ['جميع الملاك', 'مالك محدد'].map((opt) => (
+                            <button key={opt} onClick={() => setSelectedRecipient(opt)} className={cn("w-full p-3 rounded-xl border text-sm font-bold text-right transition-all", selectedRecipient === opt ? 'border-primary bg-primary/5 text-primary' : 'border-gray-100 text-slate-600 hover:bg-slate-50')}>
+                              {opt}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-slate-600 mb-2 block">قناة الإرسال</label>
+                      <div className="flex gap-2">
+                        {[{ label: 'SMS', icon: 'sms' }, { label: 'بريد', icon: 'email' }, { label: 'إشعار', icon: 'notifications' }].map((ch) => (
+                          <button key={ch.label} onClick={() => setSelectedChannel(ch.label)} className={cn("flex-1 py-2.5 rounded-xl border text-xs font-bold flex flex-col items-center gap-1 transition-all", selectedChannel === ch.label ? 'border-primary bg-primary/5 text-primary' : 'border-gray-100 text-slate-600 hover:border-primary hover:text-primary hover:bg-primary/5')}>
+                            <Icon name={ch.icon} className="text-base" />
+                            {ch.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 mt-6">
+                    <button onClick={() => setSendModal(null)} className="py-3 rounded-xl border border-gray-200 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-colors">إلغاء</button>
+                    <button
+                      disabled={!selectedRecipient}
+                      onClick={handleSend}
+                      className={cn("py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 shadow-lg transition-all", selectedRecipient ? "bg-brand-dark shadow-brand-dark/20 hover:opacity-90" : "bg-slate-300 cursor-not-allowed")}
+                    >
+                      <Icon name="send" className="text-sm" /> إرسال
+                    </button>
+                  </div>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <BottomNav active="manager_dashboard" onSelect={onSelect} />
+    </div>
+  );
+};
+
+// --- Property Forms Screen ---
+
+const PropertyFormsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const [activeCategory, setActiveCategory] = useState('الكل');
+  const [openForm, setOpenForm] = useState<typeof PROPERTY_FORMS[0] | null>(null);
+  const [formValues, setFormValues] = useState<Record<string, string>>({});
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+
+  const categories = ['الكل', 'عقارات', 'مالية', 'صيانة', 'خدمات'];
+  const filtered = activeCategory === 'الكل' ? PROPERTY_FORMS : PROPERTY_FORMS.filter(f => f.category === activeCategory);
+
+  const categoryBadgeStyle = (cat: string) => {
+    if (cat === 'عقارات') return 'bg-blue-50 text-blue-600';
+    if (cat === 'مالية') return 'bg-emerald-50 text-emerald-600';
+    if (cat === 'صيانة') return 'bg-orange-50 text-orange-600';
+    return 'bg-purple-50 text-purple-600';
+  };
+
+  const handleSubmitForm = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitSuccess(true);
+    setTimeout(() => {
+      setSubmitSuccess(false);
+      setOpenForm(null);
+      setFormValues({});
+    }, 1800);
+  };
+
+  return (
+    <div className="min-h-screen bg-[#f8f8f5] pb-24">
+      <header className="flex items-center justify-between p-4 bg-brand-dark sticky top-0 z-30 shadow-xl">
+        <button onClick={() => onSelect('manager_dashboard')} className="flex size-10 items-center justify-center rounded-xl bg-white/5 text-white hover:bg-white/10 transition-all">
+          <Icon name="arrow_forward" className="text-2xl" />
+        </button>
+        <div className="text-center">
+          <h2 className="text-base font-black text-white">نماذج وإشعارات العقارات</h2>
+          <p className="text-[10px] text-primary font-bold">{toArabicDigits(PROPERTY_FORMS.length)} نماذج جاهزة</p>
+        </div>
+        <div className="flex size-10 items-center justify-center rounded-xl gold-gradient text-brand-dark shadow-lg shadow-primary/20">
+          <Icon name="description" className="text-xl" />
+        </div>
+      </header>
+
+      <main className="p-4 space-y-5">
+        {/* Stats row */}
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { label: 'عقارات', count: PROPERTY_FORMS.filter(f => f.category === 'عقارات').length, icon: 'apartment', color: 'text-blue-600', bg: 'bg-blue-50' },
+            { label: 'مالية', count: PROPERTY_FORMS.filter(f => f.category === 'مالية').length, icon: 'payments', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+            { label: 'صيانة', count: PROPERTY_FORMS.filter(f => f.category === 'صيانة').length, icon: 'build', color: 'text-orange-600', bg: 'bg-orange-50' },
+            { label: 'خدمات', count: PROPERTY_FORMS.filter(f => f.category === 'خدمات').length, icon: 'star', color: 'text-purple-600', bg: 'bg-purple-50' },
+          ].map((s, i) => (
+            <div key={i} className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center gap-1.5">
+              <div className={cn("size-8 rounded-xl flex items-center justify-center", s.bg, s.color)}>
+                <Icon name={s.icon} className="text-base" />
+              </div>
+              <p className="text-lg font-black text-brand-dark">{toArabicDigits(s.count)}</p>
+              <p className="text-[9px] font-bold text-slate-400">{s.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Category tabs */}
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className={cn(
+                "whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all",
+                activeCategory === cat
+                  ? 'bg-brand-dark text-white shadow-md'
+                  : 'bg-white border border-gray-100 text-gray-500 hover:bg-slate-50'
+              )}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+
+        {/* Forms list */}
+        <AnimatePresence mode="popLayout">
+          {filtered.map((form) => (
+            <motion.div
+              key={form.id}
+              layout
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+            >
+              <div className="p-4 flex items-start gap-4">
+                <div className={cn("size-12 rounded-2xl flex items-center justify-center shrink-0", form.bg, form.color)}>
+                  <Icon name={form.icon} className="text-2xl" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <h4 className="font-black text-sm text-brand-dark leading-snug">{form.title}</h4>
+                    <span className={cn("text-[9px] font-black px-2 py-0.5 rounded-full shrink-0", categoryBadgeStyle(form.category))}>{form.category}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 font-medium mb-2">{form.desc}</p>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <span className="text-[9px] text-slate-400 font-bold">الحقول:</span>
+                    {form.fields.slice(0, 3).map((f, i) => (
+                      <span key={i} className="text-[9px] bg-slate-50 text-slate-500 font-bold px-1.5 py-0.5 rounded-md">{f.label}</span>
+                    ))}
+                    {form.fields.length > 3 && <span className="text-[9px] text-slate-400 font-bold">+{form.fields.length - 3} أخرى</span>}
+                  </div>
+                </div>
+              </div>
+              <div className="border-t border-gray-50 grid grid-cols-2 divide-x divide-gray-50">
+                <button
+                  onClick={() => { setOpenForm(form); setFormValues({}); setSubmitSuccess(false); }}
+                  className="py-3 text-xs font-bold text-primary flex items-center justify-center gap-1.5 hover:bg-primary/5 transition-colors"
+                >
+                  <Icon name="edit_document" className="text-sm" /> تعبئة النموذج
+                </button>
+                <button onClick={() => window.print()} className="py-3 text-xs font-bold text-slate-500 flex items-center justify-center gap-1.5 hover:bg-slate-50 transition-colors">
+                  <Icon name="print" className="text-sm" /> طباعة فارغ
+                </button>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </main>
+
+      {/* Form Fill Modal */}
+      <AnimatePresence>
+        {openForm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center"
+            onClick={() => { if (!submitSuccess) setOpenForm(null); }}
+          >
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 250 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white rounded-t-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+            >
+              {submitSuccess ? (
+                <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex flex-col items-center py-16 text-center px-6">
+                  <div className="size-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-6">
+                    <Icon name="check_circle" className="text-6xl" />
+                  </div>
+                  <h3 className="text-2xl font-black text-brand-dark mb-2">تم الحفظ!</h3>
+                  <p className="text-sm text-slate-500">تم حفظ النموذج وإرساله بنجاح</p>
+                </motion.div>
+              ) : (
+                <>
+                  <div className="sticky top-0 bg-white border-b border-gray-100 p-5 flex items-center gap-3">
+                    <div className={cn("size-10 rounded-xl flex items-center justify-center", openForm.bg, openForm.color)}>
+                      <Icon name={openForm.icon} className="text-xl" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-black text-brand-dark text-sm">{openForm.title}</h3>
+                      <p className="text-[10px] text-slate-400">{openForm.fields.length} حقول</p>
+                    </div>
+                    <button onClick={() => setOpenForm(null)} className="size-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors">
+                      <Icon name="close" className="text-base" />
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleSubmitForm} className="p-5 space-y-4">
+                    {/* Property & unit selectors */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs font-bold text-slate-600">العقار</label>
+                        <select className="w-full rounded-xl border border-gray-200 bg-slate-50 py-2.5 px-3 text-sm outline-none focus:ring-2 focus:ring-primary transition-all">
+                          <option value="">اختر العقار</option>
+                          {PROPERTIES.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs font-bold text-slate-600">الوحدة</label>
+                        <select className="w-full rounded-xl border border-gray-200 bg-slate-50 py-2.5 px-3 text-sm outline-none focus:ring-2 focus:ring-primary transition-all">
+                          <option value="">اختر الوحدة</option>
+                          {UNITS.map(u => <option key={u.id} value={u.id}>{u.id} - {u.type}</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                    {openForm.fields.map((field, i) => (
+                      <div key={i} className="flex flex-col gap-1">
+                        <label className="text-xs font-bold text-slate-600">{field.label}</label>
+                        {field.type === 'select' ? (
+                          <select
+                            className="w-full rounded-xl border border-gray-200 bg-slate-50 py-2.5 px-3 text-sm outline-none focus:ring-2 focus:ring-primary transition-all"
+                            value={formValues[field.label] || ''}
+                            onChange={e => setFormValues(prev => ({ ...prev, [field.label]: e.target.value }))}
+                          >
+                            <option value="">اختر...</option>
+                            {(field.options || []).map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
+                          </select>
+                        ) : field.type === 'textarea' ? (
+                          <textarea
+                            rows={3}
+                            className="w-full rounded-xl border border-gray-200 bg-slate-50 py-2.5 px-3 text-sm outline-none focus:ring-2 focus:ring-primary transition-all resize-none"
+                            placeholder={`أدخل ${field.label}...`}
+                            value={formValues[field.label] || ''}
+                            onChange={e => setFormValues(prev => ({ ...prev, [field.label]: e.target.value }))}
+                          />
+                        ) : field.type === 'file' ? (
+                          <div className="w-full h-24 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center text-gray-400 bg-slate-50 cursor-pointer hover:bg-gray-50 transition-colors">
+                            <Icon name="attach_file" className="text-2xl mb-1" />
+                            <span className="text-xs font-bold">اضغط لإرفاق الملف</span>
+                          </div>
+                        ) : (
+                          <input
+                            type={field.type}
+                            className="w-full rounded-xl border border-gray-200 bg-slate-50 py-2.5 px-3 text-sm outline-none focus:ring-2 focus:ring-primary transition-all"
+                            placeholder={`أدخل ${field.label}...`}
+                            value={formValues[field.label] || ''}
+                            onChange={e => setFormValues(prev => ({ ...prev, [field.label]: e.target.value }))}
+                          />
+                        )}
+                      </div>
+                    ))}
+
+                    <div className="pt-2 grid grid-cols-2 gap-3">
+                      <button type="button" onClick={() => setOpenForm(null)} className="py-3 rounded-xl border border-gray-200 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-colors">إلغاء</button>
+                      <button type="submit" className="py-3 rounded-xl bg-brand-dark text-white text-sm font-bold shadow-lg shadow-brand-dark/20 hover:opacity-90 transition-all flex items-center justify-center gap-2">
+                        <Icon name="save" className="text-sm" /> حفظ وإرسال
+                      </button>
+                    </div>
+                  </form>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <BottomNav active="manager_dashboard" onSelect={onSelect} />
+    </div>
+  );
+};
+
 // --- Main App ---
 
 export default function App() {
@@ -5224,6 +5815,8 @@ export default function App() {
       case 'payment': return <PaymentScreen onSelect={setCurrentView} />;
       case 'owner_dashboard': return <OwnerDashboard onSelect={setCurrentView} />;
       case 'tech_portal': return <TechPortal onSelect={setCurrentView} />;
+      case 'msg_templates': return <MessageTemplatesScreen onSelect={setCurrentView} />;
+      case 'property_forms': return <PropertyFormsScreen onSelect={setCurrentView} />;
       default: return <WelcomeScreen onSelect={setCurrentView} />;
     }
   };
