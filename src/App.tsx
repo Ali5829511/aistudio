@@ -6,6 +6,17 @@ import {
 } from 'recharts';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// Fix Leaflet's default icon path issues
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
 // --- Utility ---
 function cn(...inputs: ClassValue[]) {
@@ -52,21 +63,52 @@ type View =
 // --- Constants & Mock Data ---
 
 const PROPERTIES = [
-  { id: '1', name: 'عمارة النخيل', location: 'الرياض، حي الصحافة', units: 24, type: 'سكني' },
-  { id: '2', name: 'برج الياسمين', location: 'الرياض، حي الملقا', units: 36, type: 'سكني' },
-  { id: '3', name: 'مجمع الروضة', location: 'الرياض، حي الروضة', units: 12, type: 'سكني' },
-  { id: '4', name: 'برج بيان', location: 'الرياض، شارع الملك فهد', units: 48, type: 'سكني تجاري' },
-  { id: '5', name: 'برج النخيل', location: 'الرياض، حي العليا', units: 30, type: 'تجاري' },
-  { id: '6', name: 'مجمع الياسمين', location: 'الرياض، حي الياسمين', units: 15, type: 'تجاري' },
-  { id: '7', name: 'حي النرجس', location: 'الرياض، حي النرجس', units: 1, type: 'سكني' },
-  { id: '8', name: 'أبراج النخيل', location: 'الرياض، حي النخيل', units: 60, type: 'سكني' },
-  { id: '9', name: 'فيلا السعادة', location: 'جدة، حي الشاطئ', units: 1, type: 'سكني' },
-  { id: '10', name: 'برج المجد', location: 'الرياض، حي السليمانية', units: 40, type: 'تجاري' },
-  { id: '11', name: 'مجمع الواحة', location: 'الرياض، حي الواحة', units: 20, type: 'سكني' },
-  { id: '12', name: 'فيلا الياسمين', location: 'الرياض، حي الياسمين', units: 1, type: 'سكني' },
-  { id: '13', name: 'عمارة السلام', location: 'الرياض، حي السلام', units: 18, type: 'سكني' },
-  { id: '14', name: 'برج الجوهرة', location: 'جدة، الكورنيش', units: 55, type: 'سكني تجاري' },
-  { id: '15', name: 'مجمع الفهد', location: 'الدمام، حي الشاطئ', units: 25, type: 'سكني' },
+  { 
+    id: '1', 
+    name: 'عمارة النخيل', 
+    location: 'الرياض - حي الصحافة', 
+    units: 24, 
+    type: 'سكني',
+    deedNumber: '١٢٣٤٥٦٧٨٩٠',
+    deedDate: '١٤٤٥/٠٥/١٠ هـ',
+    deedIssuer: 'كتابة العدل الأولى بالرياض',
+    documentNumber: '٩٨٧٦٥٤',
+    plotNumber: '١٥',
+    planNumber: '٣٠٢٠',
+    deedArea: '٥٠٠ م٢',
+    deedType: 'إلكتروني',
+    cadastralNumber: '١٠٢٠٣٠٤٠٥٠',
+    cadastralDate: '١٤٤٥/٠٦/٠١ هـ',
+    cadastralStatus: 'مسجل',
+    region: 'الرياض',
+    city: 'الرياض',
+    district: 'حي الصحافة',
+    nationalAddress: '١٢٣٤ الرياض ٥٦٧٨',
+    buildingType: 'سكني',
+    usagePurpose: 'سكني وتجاري',
+    floorsCount: '١٢',
+    elevatorsCount: '٣',
+    parkingCount: '٦٠',
+    facilities: ['مسبح', 'نادي رياضي', 'منطقة ألعاب أطفال', 'كاميرات مراقبة', 'حراسة أمنية'],
+    ownerName: 'شركة رمز الإبداع العقارية',
+    ownerId: '١٠١٠١٠١٠١٠',
+    ownerPhone: '٠٥٠٠٠٠٠٠٠٠',
+    ownerEmail: 'info@ramz.com'
+  },
+  { id: '2', name: 'برج الياسمين', location: 'الرياض - حي الملقا', units: 36, type: 'سكني' },
+  { id: '3', name: 'مجمع الروضة', location: 'الرياض - حي الروضة', units: 12, type: 'سكني' },
+  { id: '4', name: 'برج بيان', location: 'الرياض - شارع الملك فهد', units: 48, type: 'سكني تجاري' },
+  { id: '5', name: 'برج النخيل', location: 'الرياض - حي العليا', units: 30, type: 'تجاري' },
+  { id: '6', name: 'مجمع الياسمين', location: 'الرياض - حي الياسمين', units: 15, type: 'تجاري' },
+  { id: '7', name: 'حي النرجس', location: 'الرياض - حي النرجس', units: 1, type: 'سكني' },
+  { id: '8', name: 'أبراج النخيل', location: 'الرياض - حي النخيل', units: 60, type: 'سكني' },
+  { id: '9', name: 'فيلا السعادة', location: 'جدة - حي الشاطئ', units: 1, type: 'سكني' },
+  { id: '10', name: 'برج المجد', location: 'الرياض - حي السليمانية', units: 40, type: 'تجاري' },
+  { id: '11', name: 'مجمع الواحة', location: 'الرياض - حي الواحة', units: 20, type: 'سكني' },
+  { id: '12', name: 'فيلا الياسمين', location: 'الرياض - حي الياسمين', units: 1, type: 'سكني' },
+  { id: '13', name: 'عمارة السلام', location: 'الرياض - حي السلام', units: 18, type: 'سكني' },
+  { id: '14', name: 'برج الجوهرة', location: 'جدة - الكورنيش', units: 55, type: 'سكني تجاري' },
+  { id: '15', name: 'مجمع الفهد', location: 'الدمام - حي الشاطئ', units: 25, type: 'سكني' },
 ];
 
 const MAINTENANCE_REQUESTS = [
@@ -285,6 +327,8 @@ const WelcomeScreen = ({ onSelect }: { onSelect: (view: View) => void }) => {
 };
 
 const ManagerDashboard = ({ onSelect, onSelectProperty }: { onSelect: (v: View) => void, onSelectProperty: (v: View, p: any) => void }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+
   const chartData = [
     { name: 'يناير', value: 4000 },
     { name: 'فبراير', value: 3000 },
@@ -293,6 +337,11 @@ const ManagerDashboard = ({ onSelect, onSelectProperty }: { onSelect: (v: View) 
     { name: 'مايو', value: 1890 },
     { name: 'يونيو', value: 2390 },
   ];
+
+  const filteredProperties = PROPERTIES.filter(prop => 
+    prop.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    prop.location.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-[#FDFDFD] pb-24">
@@ -521,82 +570,130 @@ const ManagerDashboard = ({ onSelect, onSelectProperty }: { onSelect: (v: View) 
 
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-xl font-black text-brand-dark">أحدث العقارات</h3>
+            <h3 className="text-xl font-black text-brand-dark">العقارات</h3>
             <button onClick={() => onSelect('property_details')} className="text-primary text-xs font-black uppercase tracking-widest">عرض الكل</button>
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-6 no-scrollbar -mx-5 px-5">
-            {PROPERTIES.slice(0, 6).map((prop, i) => (
-              <motion.div 
-                key={prop.id}
-                whileHover={{ y: -8 }}
-                onClick={() => onSelectProperty('property_details', prop)}
-                className="min-w-[280px] bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden cursor-pointer group"
-              >
-                <div className="h-40 bg-slate-200 relative overflow-hidden">
-                  <img 
-                    src={`https://picsum.photos/seed/${prop.id}/600/400`} 
-                    alt={prop.name}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60"></div>
-                  <div className="absolute top-4 right-4 bg-primary text-brand-dark px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
-                    {prop.type}
-                  </div>
-                  <div className="absolute bottom-4 right-4 left-4 flex justify-between items-end">
-                     <p className="text-white text-xs font-bold flex items-center gap-1">
-                        <Icon name="location_on" className="text-sm text-primary" />
-                        {prop.location}
-                     </p>
-                     <div className="flex gap-2">
-                       <button 
-                         onClick={(e) => {
-                           e.stopPropagation();
-                           onSelectProperty('property_report', prop);
-                         }}
-                         className="size-8 bg-white/20 backdrop-blur-md rounded-lg flex items-center justify-center text-white hover:bg-primary hover:text-brand-dark transition-all"
-                         title="تقرير العقار"
-                       >
-                         <Icon name="description" className="text-lg" />
-                       </button>
-                       <button 
-                         onClick={(e) => {
-                           e.stopPropagation();
-                           // We need to set selected property and then print
-                           // Since we are in ManagerDashboard, we can use a callback or global state
-                           (window as any).selectProperty(prop);
-                           setTimeout(() => window.print(), 500);
-                         }}
-                         className="size-8 bg-white/20 backdrop-blur-md rounded-lg flex items-center justify-center text-white hover:bg-brand-yellow hover:text-brand-dark transition-all"
-                         title="طباعة سريعة"
-                       >
-                         <Icon name="print" className="text-lg" />
-                       </button>
-                     </div>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <h4 className="font-black text-lg text-brand-dark mb-4">{prop.name}</h4>
-                  <div className="flex items-center justify-between pt-4 border-t border-slate-50">
-                    <div className="flex items-center gap-2">
-                       <div className="size-8 bg-slate-50 rounded-lg flex items-center justify-center text-slate-400">
-                          <Icon name="door_front" className="text-lg" />
-                       </div>
-                       <span className="text-xs font-black text-slate-600">{toArabicDigits(prop.units)} وحدة</span>
-                    </div>
-                    <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-brand-dark transition-all">
-                       <Icon name="arrow_back" className="text-lg" />
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+          
+          {/* Search Bar */}
+          <div className="relative">
+            <Icon name="search" className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input 
+              type="text" 
+              placeholder="ابحث عن عقار بالاسم أو العنوان..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-white border border-slate-100 rounded-2xl py-3 pr-12 pl-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
+            />
+          </div>
+
+          {/* Property List */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredProperties.length > 0 ? (
+              filteredProperties.slice(0, 6).map((prop) => (
+                <PropertyCard 
+                  key={prop.id} 
+                  property={prop} 
+                  onSelectProperty={onSelectProperty} 
+                />
+              ))
+            ) : (
+              <div className="col-span-full py-10 text-center text-slate-500 bg-slate-50 rounded-2xl border border-slate-100">
+                لا توجد عقارات مطابقة للبحث
+              </div>
+            )}
           </div>
         </section>
       </main>
 
       <BottomNav active="manager_dashboard" onSelect={onSelect} />
     </div>
+  );
+};
+
+const PropertyCard: React.FC<{ property: any, onSelectProperty: (view: View, prop: any) => void }> = ({ property, onSelectProperty }) => {
+  // Determine status color and label
+  let statusColor = 'bg-green-100 text-green-700';
+  let statusLabel = 'متاح';
+  if (property.status === 'نشط') {
+    statusColor = 'bg-blue-100 text-blue-700';
+    statusLabel = 'مؤجر بالكامل';
+  } else if (property.status === 'صيانة') {
+    statusColor = 'bg-amber-100 text-amber-700';
+    statusLabel = 'تحت الصيانة';
+  }
+
+  return (
+    <motion.div 
+      whileHover={{ y: -4, scale: 1.01 }}
+      onClick={() => onSelectProperty('property_details', property)}
+      className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden cursor-pointer group flex flex-col"
+    >
+      <div className="h-40 bg-slate-200 relative overflow-hidden">
+        <img 
+          src={`https://picsum.photos/seed/${property.id}/600/400`} 
+          alt={property.name}
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+          referrerPolicy="no-referrer"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-80"></div>
+        
+        {/* Status Indicator */}
+        <div className={`absolute top-4 right-4 px-3 py-1 rounded-full text-[10px] font-black tracking-widest ${statusColor}`}>
+          {statusLabel}
+        </div>
+        
+        {/* Type Badge */}
+        <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] font-bold">
+          {property.type}
+        </div>
+
+        <div className="absolute bottom-4 right-4 left-4 flex justify-between items-end">
+           <div className="space-y-1">
+             <h4 className="font-black text-lg text-white drop-shadow-md">{property.name}</h4>
+             <p className="text-white/90 text-xs font-bold flex items-center gap-1">
+                <Icon name="location_on" className="text-sm text-primary" />
+                {property.location}
+             </p>
+           </div>
+           <div className="flex gap-2">
+             <button 
+               onClick={(e) => {
+                 e.stopPropagation();
+                 onSelectProperty('property_report', property);
+               }}
+               className="size-8 bg-white/20 backdrop-blur-md rounded-lg flex items-center justify-center text-white hover:bg-primary hover:text-brand-dark transition-all"
+               title="تقرير العقار"
+             >
+               <Icon name="description" className="text-lg" />
+             </button>
+             <button 
+               onClick={(e) => {
+                 e.stopPropagation();
+                 (window as any).selectProperty(property);
+                 setTimeout(() => window.print(), 500);
+               }}
+               className="size-8 bg-white/20 backdrop-blur-md rounded-lg flex items-center justify-center text-white hover:bg-brand-yellow hover:text-brand-dark transition-all"
+               title="طباعة سريعة"
+             >
+               <Icon name="print" className="text-lg" />
+             </button>
+           </div>
+        </div>
+      </div>
+      <div className="p-5 flex-1 flex flex-col justify-between">
+        <div className="flex items-center justify-between pt-2">
+          <div className="flex items-center gap-2">
+             <div className="size-8 bg-slate-50 rounded-lg flex items-center justify-center text-slate-400">
+                <Icon name="door_front" className="text-lg" />
+             </div>
+             <span className="text-xs font-black text-slate-600">{toArabicDigits(property.units)} وحدة</span>
+          </div>
+          <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-brand-dark transition-all">
+             <Icon name="arrow_back" className="text-lg" />
+          </div>
+        </div>
+      </div>
+    </motion.div>
   );
 };
 
@@ -1418,6 +1515,53 @@ const PropertyDetailsScreen = ({ onSelect, property }: { onSelect: (v: View) => 
             ))}
           </div>
         </section>
+
+        <section className="px-5 space-y-3">
+          <h3 className="text-base font-bold">الموقع على الخريطة</h3>
+          <div className="h-48 w-full rounded-2xl overflow-hidden shadow-sm border border-slate-100 relative z-0">
+            <MapContainer center={[24.7136, 46.6753]} zoom={13} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              <Marker position={[24.7136, 46.6753]}>
+                <Popup>
+                  {property.name} <br /> {property.location}
+                </Popup>
+              </Marker>
+            </MapContainer>
+          </div>
+        </section>
+
+        <section className="px-5 space-y-3">
+          <h3 className="text-base font-bold">سجل المشاهدات والتفاعلات</h3>
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            {[
+              { user: 'أحمد محمد', action: 'عرض تفاصيل العقار', date: '٢٠٢٤/٠٣/١٥ ١٠:٣٠ ص', type: 'view' },
+              { user: 'سارة خالد', action: 'تحميل تقرير العقار', date: '٢٠٢٤/٠٣/١٤ ٠٢:١٥ م', type: 'download' },
+              { user: 'مدير النظام', action: 'تحديث بيانات الصك', date: '٢٠٢٤/٠٣/١٠ ٠٩:٠٠ ص', type: 'edit' },
+            ].map((log, i) => (
+              <div key={i} className="p-4 border-b border-slate-50 last:border-0 flex items-start gap-3">
+                <div className={cn(
+                  "size-8 rounded-full flex items-center justify-center shrink-0",
+                  log.type === 'view' ? 'bg-blue-50 text-blue-500' : 
+                  log.type === 'download' ? 'bg-emerald-50 text-emerald-500' : 
+                  'bg-amber-50 text-amber-500'
+                )}>
+                  <Icon name={log.type === 'view' ? 'visibility' : log.type === 'download' ? 'download' : 'edit'} className="text-sm" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-brand-dark">{log.action}</p>
+                  <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-500">
+                    <span className="font-bold">{log.user}</span>
+                    <span>•</span>
+                    <span>{log.date}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
       </main>
 
       <BottomNav active="property_details" onSelect={onSelect} />
@@ -2004,6 +2148,10 @@ const AddPropertyScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
     }, 1000);
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   if (isSuccess) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
@@ -2020,66 +2168,195 @@ const AddPropertyScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
     );
   }
 
+  const Section = ({ title, children }: { title: string, children: React.ReactNode }) => (
+    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4 print:shadow-none print:border-slate-200 print:break-inside-avoid">
+      <h3 className="text-lg font-black text-brand-dark border-b border-slate-100 pb-2">{title}</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {children}
+      </div>
+    </div>
+  );
+
+  const InputField = ({ label, type = "text", placeholder = "", required = false, value, onChange }: any) => (
+    <div className="flex flex-col gap-1">
+      <label className="text-sm font-bold text-slate-700">{label}</label>
+      <input 
+        required={required}
+        type={type}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        className="w-full rounded-xl border border-gray-200 bg-slate-50 py-2.5 px-4 focus:ring-2 focus:ring-primary focus:bg-white outline-none transition-all print:border-none print:bg-transparent print:p-0 print:font-bold" 
+      />
+    </div>
+  );
+
+  const SelectField = ({ label, options }: { label: string, options: string[] }) => (
+    <div className="flex flex-col gap-1">
+      <label className="text-sm font-bold text-slate-700">{label}</label>
+      <select className="w-full rounded-xl border border-gray-200 bg-slate-50 py-2.5 px-4 focus:ring-2 focus:ring-primary focus:bg-white outline-none transition-all print:appearance-none print:border-none print:bg-transparent print:p-0 print:font-bold">
+        {options.map((opt, i) => <option key={i}>{opt}</option>)}
+      </select>
+    </div>
+  );
+
+  const TextAreaField = ({ label, rows = 3 }: { label: string, rows?: number }) => (
+    <div className="flex flex-col gap-1 md:col-span-2">
+      <label className="text-sm font-bold text-slate-700">{label}</label>
+      <textarea 
+        rows={rows}
+        className="w-full rounded-xl border border-gray-200 bg-slate-50 py-2.5 px-4 focus:ring-2 focus:ring-primary focus:bg-white outline-none transition-all print:border-none print:bg-transparent print:p-0 print:font-bold" 
+      ></textarea>
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-[#f8f8f5] pb-24">
-      <header className="flex items-center justify-between p-4 bg-white sticky top-0 z-10 shadow-sm border-b border-primary/10">
+    <div className="min-h-screen bg-[#f8f8f5] pb-24 print:bg-white print:pb-0">
+      <header className="flex items-center justify-between p-4 bg-white sticky top-0 z-30 shadow-sm border-b border-primary/10 print:hidden">
         <button onClick={() => onSelect('manager_dashboard')} className="p-2 rounded-full hover:bg-slate-100 transition-colors">
           <Icon name="arrow_forward" className="text-2xl" />
         </button>
-        <h2 className="text-lg font-bold flex-1 text-center pr-12">إضافة عقار جديد</h2>
+        <h2 className="text-lg font-bold flex-1 text-center">إضافة عقار جديد / تقرير مفصل</h2>
+        <button onClick={handlePrint} className="p-2 rounded-full hover:bg-slate-100 transition-colors text-primary" title="طباعة البيانات">
+          <Icon name="print" className="text-2xl" />
+        </button>
       </header>
-      <main className="p-4">
+      
+      <div className="hidden print:block text-center pt-8 pb-4">
+        <h1 className="text-3xl font-black text-brand-dark mb-2">تقرير تفصيلي للعقار</h1>
+        <p className="text-slate-500">{new Date().toLocaleDateString('ar-SA')}</p>
+      </div>
+
+      <main className="p-4 max-w-4xl mx-auto">
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
             <motion.div 
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-red-50 border border-red-100 p-4 rounded-xl flex items-center gap-3 text-red-600 text-sm font-bold"
+              className="bg-red-50 border border-red-100 p-4 rounded-xl flex items-center gap-3 text-red-600 text-sm font-bold print:hidden"
             >
               <Icon name="error" />
               {error}
             </motion.div>
           )}
-          <div className="space-y-4">
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-bold">اسم العقار</label>
-              <input 
-                required 
-                value={propertyName}
-                onChange={(e) => setPropertyName(e.target.value)}
-                className="w-full rounded-xl border border-gray-200 bg-white py-3 px-4 focus:ring-2 focus:ring-primary outline-none transition-all" 
-                placeholder="مثال: برج النخيل" 
-                type="text" 
-              />
+
+          <Section title="البيانات العامة">
+            <InputField label="اسم العقار" required value={propertyName} onChange={(e: any) => setPropertyName(e.target.value)} />
+            <InputField label="تاريخ التقرير" type="date" />
+            <InputField label="المدينة" />
+            <InputField label="الحي" />
+          </Section>
+
+          <Section title="بيانات الصك والسجل العيني">
+            <InputField label="رقم الصك" />
+            <InputField label="تاريخ الإصدار" type="date" />
+            <InputField label="جهة الإصدار" />
+            <InputField label="رقم المستند" />
+            <InputField label="رقم القطعة" />
+            <InputField label="رقم المخطط" />
+            <InputField label="مساحة الصك" type="number" />
+            <InputField label="نوع الصك" />
+            <InputField label="رقم تسجيل العيني" />
+            <InputField label="تاريخ التسجيل" type="date" />
+            <InputField label="حالة تسجيل العيني" />
+          </Section>
+
+          <Section title="بيانات العقار">
+            <InputField label="المنطقة" />
+            <InputField label="المدينة" />
+            <InputField label="الحي" />
+            <InputField label="العنوان الوطني" />
+            <SelectField label="نوع المبنى" options={['سكني', 'تجاري', 'مختلط', 'أخرى']} />
+            <InputField label="الغرض من الاستخدام" />
+            <InputField label="عدد الطوابق" type="number" />
+            <InputField label="الوحدات" type="number" />
+            <InputField label="المصاعد" type="number" />
+            <InputField label="المواقف" type="number" />
+          </Section>
+
+          <Section title="المرافق">
+            <InputField label="مرفق 1" />
+            <InputField label="مرفق 2" />
+            <InputField label="مرفق 3" />
+            <InputField label="مرفق 4" />
+          </Section>
+
+          <Section title="بيانات الوحدة">
+            <SelectField label="نوع الوحدة" options={['شقة', 'فيلا', 'مكتب', 'معرض', 'مستودع']} />
+            <InputField label="رقم الوحدة" />
+            <InputField label="رقم الطابق" />
+            <InputField label="المساحة" type="number" />
+            <SelectField label="حالة التأثيث" options={['غير مؤثث', 'مؤثث جزئياً', 'مؤثث بالكامل']} />
+            <SelectField label="خزائن مطبخ" options={['نعم', 'لا']} />
+            <InputField label="عدد وحدات التكييف" type="number" />
+            <TextAreaField label="تفاصيل الغرف" rows={2} />
+            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <InputField label="عداد الكهرباء 1" />
+              <InputField label="عداد الكهرباء 2" />
+              <InputField label="عداد الكهرباء 3" />
+              <InputField label="عداد مياه" />
             </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-bold">نوع العقار</label>
-              <select className="w-full rounded-xl border border-gray-200 bg-white py-3 px-4 focus:ring-2 focus:ring-primary outline-none transition-all">
-                <option>سكني</option>
-                <option>تجاري</option>
-                <option>مختلط</option>
-              </select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-bold">الموقع</label>
-              <div className="relative">
-                <input required className="w-full rounded-xl border border-gray-200 bg-white py-3 pr-10 pl-4 focus:ring-2 focus:ring-primary outline-none transition-all" placeholder="أدخل العنوان بالتفصيل" type="text" />
-                <Icon name="location_on" className="absolute right-3 top-3 text-gray-400" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1">
-                <label className="text-sm font-bold">عدد الوحدات</label>
-                <input required className="w-full rounded-xl border border-gray-200 bg-white py-3 px-4 focus:ring-2 focus:ring-primary outline-none transition-all" placeholder="0" type="number" />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-sm font-bold">سنة البناء</label>
-                <input className="w-full rounded-xl border border-gray-200 bg-white py-3 px-4 focus:ring-2 focus:ring-primary outline-none transition-all" placeholder="2024" type="number" />
-              </div>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-bold">صور العقار</label>
+          </Section>
+
+          <Section title="بيانات المالك">
+            <InputField label="اسم المالك" />
+            <InputField label="رقم الهوية" />
+            <InputField label="الجنسية" />
+            <InputField label="نسبة الملكية" />
+            <InputField label="مساحة الملكية" />
+            <SelectField label="نوع المالك" options={['فرد', 'شركة', 'جهة حكومية', 'أخرى']} />
+          </Section>
+
+          <Section title="اتحاد الملاك">
+            <InputField label="اسم الجمعية" />
+            <InputField label="رقم التسجيل" />
+            <InputField label="الرقم الموحد" />
+            <InputField label="تاريخ السريان والانتهاء" />
+            <SelectField label="حالة الجمعية" options={['نشطة', 'غير نشطة', 'تحت التأسيس']} />
+            <InputField label="اسم رئيس الجمعية" />
+            <InputField label="رقم جوال رئيس الجمعية" type="tel" />
+            <InputField label="اسم مدير العقار" />
+            <InputField label="رقم جوال مدير العقار" type="tel" />
+          </Section>
+
+          <Section title="نتائج التصويت والرسوم">
+            <InputField label="إجمالي الرسوم" type="number" />
+            <InputField label="عدد المصوتين" type="number" />
+            <InputField label="نسبة القبول" />
+            <InputField label="غير المصوتين" type="number" />
+          </Section>
+
+          <Section title="عقد الإيجار">
+            <InputField label="رقم العقد" />
+            <SelectField label="نوع العقد" options={['سكني موحد', 'تجاري موحد', 'أخرى']} />
+            <InputField label="تاريخ الإبرام" type="date" />
+            <InputField label="بداية ونهاية الإيجار" />
+            <InputField label="مدة العقد" />
+            <InputField label="قيمة الإيجار السنوي" type="number" />
+            <InputField label="عدد الدفعات" type="number" />
+            <InputField label="قنوات الدفع" />
+          </Section>
+
+          <Section title="بيانات المستأجر">
+            <InputField label="اسم المستأجر" />
+            <InputField label="الجنسية" />
+            <SelectField label="نوع الهوية" options={['هوية وطنية', 'إقامة', 'جواز سفر', 'سجل تجاري']} />
+            <InputField label="رقم الهوية" />
+            <InputField label="الجوال" type="tel" />
+            <InputField label="البريد الإلكتروني" type="email" />
+          </Section>
+
+          <Section title="الوسيط العقاري">
+            <InputField label="اسم المنشأة" />
+            <InputField label="السجل التجاري" />
+          </Section>
+
+          <Section title="ملاحظات">
+            <TextAreaField label="ملاحظات إضافية" rows={4} />
+          </Section>
+
+          <div className="space-y-2 print:hidden">
+            <label className="text-sm font-bold text-slate-700">صور العقار</label>
             <motion.div 
               whileTap={{ scale: 0.98 }}
               className="w-full h-32 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-gray-400 bg-white cursor-pointer hover:bg-slate-50 transition-colors"
@@ -2088,11 +2365,12 @@ const AddPropertyScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
               <span className="text-xs">اضغط لرفع الصور</span>
             </motion.div>
           </div>
+
           <button 
             type="submit"
             disabled={isSubmitting}
             className={cn(
-              "w-full py-4 text-white font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 hover-lift",
+              "w-full py-4 text-white font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 hover-lift print:hidden",
               isSubmitting ? "bg-slate-400 cursor-not-allowed" : "bg-primary shadow-primary/20 hover:bg-primary-dark"
             )}
           >
@@ -2103,7 +2381,7 @@ const AddPropertyScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
               >
                 <Icon name="sync" />
               </motion.div>
-            ) : "حفظ العقار"}
+            ) : "حفظ بيانات العقار"}
           </button>
         </form>
       </main>
@@ -2152,11 +2430,23 @@ const OwnersManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) =
 
 const UnitsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
   const [activeFilter, setActiveFilter] = useState('الكل');
-  const filters = ['الكل', 'شاغرة', 'مؤجرة', 'تحت الصيانة'];
+  const [searchQuery, setSearchQuery] = useState('');
+  const [propertyFilter, setPropertyFilter] = useState('الكل');
+  const [typeFilter, setTypeFilter] = useState('الكل');
 
-  const filteredUnits = UNITS.filter(unit => 
-    activeFilter === 'الكل' || unit.status === activeFilter
-  );
+  const filters = ['الكل', 'شاغرة', 'مؤجرة', 'تحت الصيانة'];
+  const properties = ['الكل', ...Array.from(new Set(UNITS.map(u => u.property)))];
+  const types = ['الكل', ...Array.from(new Set(UNITS.map(u => u.type)))];
+
+  const filteredUnits = UNITS.filter(unit => {
+    const matchesStatus = activeFilter === 'الكل' || unit.status === activeFilter;
+    const matchesProperty = propertyFilter === 'الكل' || unit.property === propertyFilter;
+    const matchesType = typeFilter === 'الكل' || unit.type === typeFilter;
+    const matchesSearch = unit.property.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          unit.id.toString().includes(searchQuery) ||
+                          unit.type.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesStatus && matchesProperty && matchesType && matchesSearch;
+  });
 
   return (
     <div className="min-h-screen bg-[#f8f8f5] pb-24">
@@ -2167,6 +2457,39 @@ const UnitsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) =>
         <h2 className="text-lg font-bold flex-1 text-center pr-12">إدارة الوحدات</h2>
       </header>
       <main className="p-4 space-y-4">
+        {/* Search Bar */}
+        <div className="relative">
+          <Icon name="search" className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input 
+            type="text" 
+            placeholder="ابحث عن وحدة برقمها، نوعها أو اسم العقار..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-white border border-slate-100 rounded-2xl py-3 pr-12 pl-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
+          />
+        </div>
+
+        {/* Filters */}
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+          <select 
+            value={propertyFilter}
+            onChange={(e) => setPropertyFilter(e.target.value)}
+            className="bg-white border border-slate-200 text-slate-600 text-xs rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20"
+          >
+            <option disabled value="الكل">العقار</option>
+            {properties.map(p => <option key={p} value={p}>{p === 'الكل' ? 'كل العقارات' : p}</option>)}
+          </select>
+          
+          <select 
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="bg-white border border-slate-200 text-slate-600 text-xs rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20"
+          >
+            <option disabled value="الكل">النوع</option>
+            {types.map(t => <option key={t} value={t}>{t === 'الكل' ? 'كل الأنواع' : t}</option>)}
+          </select>
+        </div>
+
         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
           {filters.map((f) => (
             <button 
@@ -2936,11 +3259,11 @@ const OfficialPrintScreen = ({ onSelect, property }: { onSelect: (v: View) => vo
               <div className="space-y-3">
                 <div className="flex justify-between border-b border-slate-100 pb-2">
                   <span className="text-slate-400">رقم الصك:</span>
-                  <span className="font-bold font-mono">9203847561</span>
+                  <span className="font-bold font-mono">{property.deedNumber || 'غير متوفر'}</span>
                 </div>
                 <div className="flex justify-between border-b border-slate-100 pb-2">
                   <span className="text-slate-400">المساحة الإجمالية:</span>
-                  <span className="font-bold">١,٢٥٠ م٢</span>
+                  <span className="font-bold">{property.deedArea || 'غير متوفر'}</span>
                 </div>
               </div>
             </div>
@@ -3106,14 +3429,17 @@ const PropertyReportScreen = ({ onSelect, property }: { onSelect: (v: View) => v
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
-              { label: 'رقم الصك', value: '١٢٣٤٥٦٧٨٩٠' },
-              { label: 'تاريخ الإصدار', value: '١٤٤٥/٠٥/١٠ هـ' },
-              { label: 'جهة الإصدار', value: 'كتابة العدل الأولى بالرياض' },
-              { label: 'رقم المستند', value: '٩٨٧٦٥٤' },
-              { label: 'رقم القطعة', value: '١٥' },
-              { label: 'رقم المخطط', value: '٣٠٢٠' },
-              { label: 'مساحة الصك', value: '٥٠٠ م٢' },
-              { label: 'نوع الصك', value: 'إلكتروني' },
+              { label: 'رقم الصك', value: property.deedNumber || 'غير متوفر' },
+              { label: 'تاريخ الإصدار', value: property.deedDate || 'غير متوفر' },
+              { label: 'جهة الإصدار', value: property.deedIssuer || 'غير متوفر' },
+              { label: 'رقم المستند', value: property.documentNumber || 'غير متوفر' },
+              { label: 'رقم القطعة', value: property.plotNumber || 'غير متوفر' },
+              { label: 'رقم المخطط', value: property.planNumber || 'غير متوفر' },
+              { label: 'مساحة الصك', value: property.deedArea || 'غير متوفر' },
+              { label: 'نوع الصك', value: property.deedType || 'غير متوفر' },
+              { label: 'رقم تسجيل العيني', value: property.cadastralNumber || 'غير متوفر' },
+              { label: 'تاريخ التسجيل', value: property.cadastralDate || 'غير متوفر' },
+              { label: 'حالة تسجيل العيني', value: property.cadastralStatus || 'غير متوفر' },
             ].map((item, i) => (
               <div key={i} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
                 <span className="text-sm font-bold text-slate-500">{item.label}:</span>
@@ -3133,16 +3459,16 @@ const PropertyReportScreen = ({ onSelect, property }: { onSelect: (v: View) => v
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
-              { label: 'المنطقة', value: 'الرياض' },
-              { label: 'المدينة', value: 'الرياض' },
-              { label: 'الحي', value: 'حي الصحافة' },
-              { label: 'العنوان الوطني', value: '١٢٣٤ الرياض ٥٦٧٨' },
-              { label: 'نوع المبنى', value: 'برج سكني تجاري' },
-              { label: 'الغرض من الاستخدام', value: 'سكني وتجاري' },
-              { label: 'عدد الطوابق', value: '١٢ طابق' },
-              { label: 'عدد الوحدات', value: '٤٨ وحدة' },
-              { label: 'عدد المصاعد', value: '٣ مصاعد' },
-              { label: 'عدد المواقف', value: '٦٠ موقف' },
+              { label: 'المنطقة', value: property.region || 'غير متوفر' },
+              { label: 'المدينة', value: property.city || property.location.split(' - ')[0] || 'غير متوفر' },
+              { label: 'الحي', value: property.district || property.location.split(' - ')[1] || 'غير متوفر' },
+              { label: 'العنوان الوطني', value: property.nationalAddress || 'غير متوفر' },
+              { label: 'نوع المبنى', value: property.buildingType || property.type || 'غير متوفر' },
+              { label: 'الغرض من الاستخدام', value: property.usagePurpose || 'غير متوفر' },
+              { label: 'عدد الطوابق', value: property.floorsCount || 'غير متوفر' },
+              { label: 'عدد الوحدات', value: property.units ? property.units + ' وحدة' : 'غير متوفر' },
+              { label: 'عدد المصاعد', value: property.elevatorsCount || 'غير متوفر' },
+              { label: 'عدد المواقف', value: property.parkingCount || 'غير متوفر' },
             ].map((item, i) => (
               <div key={i} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
                 <span className="text-sm font-bold text-slate-500">{item.label}:</span>
@@ -3153,7 +3479,7 @@ const PropertyReportScreen = ({ onSelect, property }: { onSelect: (v: View) => v
           <div className="mt-6">
             <h4 className="text-sm font-bold text-slate-400 mb-3 uppercase tracking-widest">المرافق والخدمات</h4>
             <div className="flex flex-wrap gap-2">
-              {['مسبح أولمبي', 'نادي رياضي متكامل', 'منطقة ألعاب أطفال', 'حراسة أمنية ٢٤/٧'].map((service, i) => (
+              {(property.facilities || ['مسبح أولمبي', 'نادي رياضي متكامل', 'منطقة ألعاب أطفال', 'حراسة أمنية ٢٤/٧']).map((service: string, i: number) => (
                 <div key={i} className="flex items-center gap-2 px-4 py-2 bg-primary/5 text-primary rounded-full text-xs font-bold border border-primary/10">
                   <Icon name="check_circle" className="text-sm" />
                   {service}
@@ -3180,6 +3506,7 @@ const PropertyReportScreen = ({ onSelect, property }: { onSelect: (v: View) => v
               { label: 'حالة التأثيث', value: 'غير مؤثث' },
               { label: 'خزائن مطبخ مركبة', value: 'نعم' },
               { label: 'عدد وحدات التكييف', value: 'عدد (١) مركزي + (٤) سبليت' },
+              { label: 'عداد مياه', value: 'مشترك' },
             ].map((item, i) => (
               <div key={i} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
                 <span className="text-sm font-bold text-slate-500">{item.label}:</span>
@@ -3194,11 +3521,22 @@ const PropertyReportScreen = ({ onSelect, property }: { onSelect: (v: View) => v
                 { label: 'صالة', value: '١' },
                 { label: 'مطبخ', value: '١' },
                 { label: 'غرف نوم', value: '٣' },
-                { label: 'عداد الكهرباء', value: 'مستقل' },
+                { label: 'دورات مياه', value: '٣' },
               ].map((room, i) => (
                 <div key={i} className="p-4 bg-slate-50 rounded-2xl text-center">
                   <p className="text-[10px] font-bold text-slate-400 mb-1">{room.label}</p>
                   <p className="text-lg font-black text-brand-dark">{room.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="mt-6">
+            <h4 className="text-sm font-bold text-slate-400 mb-3 uppercase tracking-widest">أرقام عدادات الكهرباء</h4>
+            <div className="flex flex-wrap gap-2">
+              {['١٠٢٩٣٨٤٧٥٦', '٥٦٤٧٣٨٢٩١٠', '٩٨٧٦٥٤٣٢١٠'].map((meter, i) => (
+                <div key={i} className="flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-700 rounded-full text-xs font-bold border border-slate-200">
+                  <Icon name="bolt" className="text-sm text-amber-500" />
+                  {meter}
                 </div>
               ))}
             </div>
@@ -3218,11 +3556,13 @@ const PropertyReportScreen = ({ onSelect, property }: { onSelect: (v: View) => v
               <h4 className="text-sm font-bold text-primary mb-3">معلومات المالك</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[
-                  { label: 'الاسم', value: 'عبد الرحمن السديري' },
-                  { label: 'رقم الهوية', value: '١٠٢٣٤٥٦٧٨٩' },
+                  { label: 'الاسم', value: property.ownerName || 'عبد الرحمن السديري' },
+                  { label: 'رقم الهوية', value: property.ownerId || '١٠٢٣٤٥٦٧٨٩' },
+                  { label: 'رقم الجوال', value: property.ownerPhone || '٠٥٠٠٠٠٠٠٠٠' },
+                  { label: 'البريد الإلكتروني', value: property.ownerEmail || 'info@example.com' },
                   { label: 'الجنسية', value: 'سعودي' },
                   { label: 'نسبة الملكية', value: '١٠٠٪' },
-                  { label: 'مساحة الملكية', value: '٥٠٠ م٢' },
+                  { label: 'مساحة الملكية', value: property.deedArea || '٥٠٠ م٢' },
                   { label: 'نوع المالك', value: 'فرد' },
                 ].map((item, i) => (
                   <div key={i} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
@@ -3242,6 +3582,10 @@ const PropertyReportScreen = ({ onSelect, property }: { onSelect: (v: View) => v
                   { label: 'تاريخ السريان', value: '١٤٤٥/٠١/٠١ هـ' },
                   { label: 'تاريخ الانتهاء', value: '١٤٤٦/٠١/٠١ هـ' },
                   { label: 'حالة الجمعية', value: 'نشطة' },
+                  { label: 'اسم رئيس الجمعية', value: 'خالد العبدالله' },
+                  { label: 'رقم جوال رئيس الجمعية', value: '٠٥٠١١٢٢٣٣٤' },
+                  { label: 'اسم مدير العقار', value: 'سعد القحطاني' },
+                  { label: 'رقم جوال مدير العقار', value: '٠٥٥٤٤٣٣٢٢١' },
                 ].map((item, i) => (
                   <div key={i} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
                     <span className="text-xs font-bold text-slate-500">{item.label}:</span>
