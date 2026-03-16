@@ -3751,27 +3751,31 @@ const PublishingScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
 
   const handleAiRequest = async () => {
     if (!aiPrompt.trim()) return;
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      setAiError('مفتاح GEMINI_API_KEY غير موجود. أضفه في ملف .env.local ثم أعد تشغيل الخادم.');
-      return;
-    }
+
     setIsAiLoading(true);
     setAiError('');
     setAiResponse('');
+
     try {
-      const { GoogleGenAI } = await import('@google/genai');
-      const ai = new GoogleGenAI({ apiKey });
-      const systemCtx = `أنت مساعد ذكاء اصطناعي متخصص في تطوير وتعديل مشاريع React/TypeScript/Vite.
-المشروع الحالي هو: "منصة شركة رمز الإبداع لإدارة الأملاك".
-المشروع يستخدم: React 19، TypeScript، Vite، Tailwind CSS، Recharts، Motion، Gemini AI.
-أجب باللغة العربية وقدّم اقتراحات عملية ومباشرة مع أمثلة كود عند الحاجة.`;
-      const result = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: [{ role: 'user', parts: [{ text: aiPrompt }] }],
-        config: { systemInstruction: systemCtx },
+      const response = await fetch('/api/ai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt: aiPrompt }),
       });
-      setAiResponse(result.text ?? 'لا توجد استجابة');
+
+      if (!response.ok) {
+        throw new Error('فشل الطلب إلى خادم الذكاء الاصطناعي');
+      }
+
+      const data = await response.json();
+      const text =
+        (typeof data?.text === 'string' && data.text) ||
+        (typeof data?.response === 'string' && data.response) ||
+        '';
+
+      setAiResponse(text || 'لا توجد استجابة');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'حدث خطأ غير متوقع';
       setAiError(`تعذّر الاتصال بالذكاء الاصطناعي: ${msg}`);
