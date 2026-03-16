@@ -50,7 +50,9 @@ type View =
   | 'official_print'
   | 'publish'
   | 'ai_assistant'
-  | 'payment';
+  | 'payment'
+  | 'owner_dashboard'
+  | 'tech_portal';
 
 // --- Constants & Mock Data ---
 
@@ -283,9 +285,9 @@ const Logo = ({ className = "size-32" }: { className?: string }) => (
 const WelcomeScreen = ({ onSelect }: { onSelect: (view: View) => void }) => {
   const accountTypes = [
     { id: 'manager_dashboard', title: 'مكتب العقارات / مديرو العقارات', icon: 'corporate_fare', desc: 'إدارة متكاملة للمحافظ العقارية' },
-    { id: 'manager_dashboard', title: 'المالك / أصحاب العقارات', icon: 'real_estate_agent', desc: 'متابعة الأداء المالي لعقاراتك' },
+    { id: 'owner_dashboard', title: 'المالك / أصحاب العقارات', icon: 'real_estate_agent', desc: 'متابعة الأداء المالي لعقاراتك' },
     { id: 'tenant_dashboard', title: 'المستأجر / سكان الوحدات', icon: 'person_pin_circle', desc: 'خدمات المستأجرين والدفع الإلكتروني' },
-    { id: 'maintenance', title: 'بوابة الفنيين', icon: 'construction', desc: 'إدارة طلبات الصيانة والمهام' },
+    { id: 'tech_portal', title: 'بوابة الفنيين', icon: 'construction', desc: 'إدارة طلبات الصيانة والمهام' },
   ];
 
   return (
@@ -4555,6 +4557,438 @@ const PropertyReportScreen = ({ onSelect, property }: { onSelect: (v: View) => v
         </section>
       </div>
     </ReportLayout>
+  );
+};
+
+// --- Owner Dashboard ---
+
+const OwnerDashboard = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const owner = OWNERS[0]; // Logged-in owner (mock)
+  // Owner's properties: first 3 from PROPERTIES
+  const ownerProperties = PROPERTIES.slice(0, 3);
+
+  const ownerTenants = TENANTS.filter(t =>
+    ownerProperties.some(p => p.name === t.property)
+  );
+  const ownerContracts = CONTRACTS.filter(c =>
+    ownerProperties.some(p => p.name === c.property)
+  );
+  const ownerMaintenance = MAINTENANCE_REQUESTS.filter(r =>
+    ownerProperties.some(p => p.name === r.property)
+  );
+
+  const totalMonthlyRent = ownerTenants.reduce((s, t) => s + Number(t.rent.replace(',', '')), 0);
+  const paidCount = ownerTenants.filter(t => t.paid).length;
+  const expiringContracts = ownerContracts.filter(c => c.status === 'ينتهي قريباً');
+  const openMaintenance = ownerMaintenance.filter(r => r.status !== 'completed');
+
+  const monthlyData = [
+    { name: 'يناير', value: 38000 },
+    { name: 'فبراير', value: 41000 },
+    { name: 'مارس', value: 39500 },
+    { name: 'أبريل', value: 43000 },
+    { name: 'مايو', value: totalMonthlyRent },
+    { name: 'يونيو', value: 46000 },
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#f8f8f5] pb-24">
+      {/* Header */}
+      <header className="bg-brand-dark text-white p-5 sticky top-0 z-50">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Logo className="size-10" />
+            <div>
+              <h1 className="text-base font-black">{owner.name}</h1>
+              <p className="text-[10px] text-slate-400">مالك عقارات • {toArabicDigits(owner.properties)} عقار</p>
+            </div>
+          </div>
+          <button onClick={() => onSelect('welcome')} className="p-2 text-slate-400 hover:text-white transition-colors">
+            <Icon name="logout" />
+          </button>
+        </div>
+      </header>
+
+      <main className="p-4 space-y-5">
+        {/* Revenue Hero */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-brand-dark text-white p-6 rounded-3xl shadow-xl relative overflow-hidden"
+        >
+          <div className="relative z-10">
+            <p className="text-xs font-bold text-primary uppercase tracking-widest mb-1">الإيراد الشهري الإجمالي</p>
+            <h2 className="text-4xl font-black mb-4">{toArabicDigits(totalMonthlyRent.toLocaleString())} <span className="text-sm font-normal text-slate-400">ر.س</span></h2>
+            <div className="flex items-center gap-4 text-[11px]">
+              <div className="flex items-center gap-1 bg-green-500/20 text-green-400 px-3 py-1 rounded-full">
+                <Icon name="check_circle" className="text-sm" />
+                <span className="font-bold">{toArabicDigits(paidCount)} مدفوعون</span>
+              </div>
+              <div className="flex items-center gap-1 bg-amber-500/20 text-amber-400 px-3 py-1 rounded-full">
+                <Icon name="pending" className="text-sm" />
+                <span className="font-bold">{toArabicDigits(ownerTenants.length - paidCount)} معلقون</span>
+              </div>
+            </div>
+          </div>
+          <Icon name="real_estate_agent" className="absolute -bottom-4 -left-4 text-9xl opacity-5" />
+        </motion.div>
+
+        {/* Summary Stats */}
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: 'العقارات', value: toArabicDigits(ownerProperties.length), icon: 'apartment', bg: 'bg-blue-50', color: 'text-blue-600' },
+            { label: 'المستأجرون', value: toArabicDigits(ownerTenants.length), icon: 'group', bg: 'bg-emerald-50', color: 'text-emerald-600' },
+            { label: 'صيانة مفتوحة', value: toArabicDigits(openMaintenance.length), icon: 'build', bg: 'bg-orange-50', color: 'text-orange-600' },
+          ].map((stat, i) => (
+            <div key={i} className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center gap-1">
+              <div className={cn("size-9 rounded-xl flex items-center justify-center", stat.bg, stat.color)}>
+                <Icon name={stat.icon} className="text-lg" />
+              </div>
+              <p className="text-xl font-black text-brand-dark">{stat.value}</p>
+              <p className="text-[9px] font-bold text-slate-400">{stat.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Revenue Chart */}
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+          <h3 className="font-bold text-brand-dark mb-4 flex items-center gap-2">
+            <Icon name="trending_up" className="text-primary" />
+            الإيرادات الشهرية
+          </h3>
+          <div className="h-40">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={monthlyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="ownerRevGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f2cc0d" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#f2cc0d" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#9ca3af' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#9ca3af' }} />
+                <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} />
+                <Area type="monotone" dataKey="value" stroke="#f2cc0d" strokeWidth={2.5} fill="url(#ownerRevGradient)" dot={false} activeDot={{ r: 5, fill: '#f2cc0d' }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Properties */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="font-bold text-brand-dark">عقاراتي</h3>
+            <span className="text-[10px] font-bold text-primary">{toArabicDigits(ownerProperties.length)} عقار</span>
+          </div>
+          {ownerProperties.map(prop => {
+            const propTenants = ownerTenants.filter(t => t.property === prop.name);
+            const propRevenue = propTenants.reduce((s, t) => s + Number(t.rent.replace(',', '')), 0);
+            const propMaintenance = openMaintenance.filter(r => r.property === prop.name);
+            return (
+              <motion.div
+                key={prop.id}
+                whileHover={{ x: -4 }}
+                className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-brand-dark rounded-xl flex items-center justify-center shrink-0">
+                      <Icon name="apartment" className="text-primary text-xl" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm text-brand-dark">{prop.name}</h4>
+                      <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                        <Icon name="location_on" className="text-[10px]" />
+                        {prop.location}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[9px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">{prop.type}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 pt-3 border-t border-gray-50">
+                  <div className="text-center">
+                    <p className="text-sm font-black text-primary">{toArabicDigits(propRevenue.toLocaleString())}</p>
+                    <p className="text-[8px] text-slate-400">ر.س/شهر</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-black text-brand-dark">{toArabicDigits(propTenants.length)}</p>
+                    <p className="text-[8px] text-slate-400">مستأجر</p>
+                  </div>
+                  <div className="text-center">
+                    <p className={cn("text-sm font-black", propMaintenance.length > 0 ? 'text-orange-600' : 'text-emerald-600')}>
+                      {toArabicDigits(propMaintenance.length)}
+                    </p>
+                    <p className="text-[8px] text-slate-400">صيانة</p>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </section>
+
+        {/* Expiring Contracts Alert */}
+        {expiringContracts.length > 0 && (
+          <section className="space-y-2">
+            <h3 className="font-bold text-brand-dark flex items-center gap-2">
+              <Icon name="event_busy" className="text-amber-500" />
+              عقود تنتهي قريباً
+            </h3>
+            {expiringContracts.map(c => (
+              <div key={c.id} className="bg-amber-50 border border-amber-100 p-4 rounded-2xl flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-sm text-brand-dark">{c.tenant}</p>
+                  <p className="text-[10px] text-slate-500">{c.property} — {c.unit}</p>
+                </div>
+                <div className="text-left">
+                  <p className="text-[10px] text-amber-600 font-bold">{c.end}</p>
+                  <p className="text-[9px] text-slate-400">{toArabicDigits(c.rent)} ر.س/شهر</p>
+                </div>
+              </div>
+            ))}
+          </section>
+        )}
+
+        {/* Open Maintenance */}
+        {openMaintenance.length > 0 && (
+          <section className="space-y-2">
+            <h3 className="font-bold text-brand-dark flex items-center gap-2">
+              <Icon name="build" className="text-orange-500" />
+              بلاغات الصيانة المفتوحة
+            </h3>
+            {openMaintenance.map(r => (
+              <div key={r.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center">
+                    <Icon name="build" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm text-brand-dark">{r.type}: {r.description.slice(0, 25)}...</p>
+                    <p className="text-[10px] text-slate-400">{r.property} — {r.unit}</p>
+                  </div>
+                </div>
+                <span className={cn("text-[9px] font-bold px-2 py-1 rounded-full", r.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700')}>
+                  {r.status === 'in_progress' ? 'قيد التنفيذ' : 'جديد'}
+                </span>
+              </div>
+            ))}
+          </section>
+        )}
+      </main>
+
+      {/* Bottom Nav */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 flex justify-around items-center py-3 pb-6 px-2 z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
+        <button className="flex flex-col items-center gap-1 text-primary relative px-3 py-1 rounded-2xl">
+          <div className="absolute inset-0 bg-primary/5 rounded-2xl" />
+          <Icon name="home" className="text-2xl relative z-10" filled />
+          <span className="text-[10px] font-black relative z-10">الرئيسية</span>
+        </button>
+        <button onClick={() => onSelect('contracts')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 px-3 py-1">
+          <Icon name="history_edu" className="text-2xl" />
+          <span className="text-[10px] font-black">العقود</span>
+        </button>
+        <button onClick={() => onSelect('accounting')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 px-3 py-1">
+          <Icon name="account_balance_wallet" className="text-2xl" />
+          <span className="text-[10px] font-black">المالية</span>
+        </button>
+        <button onClick={() => onSelect('maintenance')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 px-3 py-1">
+          <Icon name="build" className="text-2xl" />
+          <span className="text-[10px] font-black">الصيانة</span>
+        </button>
+        <button onClick={() => onSelect('welcome')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-red-500 px-3 py-1">
+          <Icon name="logout" className="text-2xl" />
+          <span className="text-[10px] font-black">خروج</span>
+        </button>
+      </nav>
+    </div>
+  );
+};
+
+// --- Technician Portal ---
+
+const TechPortal = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const techName = 'أحمد محمود';
+  const [activeTab, setActiveTab] = useState<'new' | 'in_progress' | 'completed'>('new');
+  const [tasks, setTasks] = useState(MAINTENANCE_REQUESTS);
+
+  const myTasks = tasks.filter(t => t.technician === techName);
+  const tabCounts = {
+    new: myTasks.filter(t => t.status === 'new').length,
+    in_progress: myTasks.filter(t => t.status === 'in_progress').length,
+    completed: myTasks.filter(t => t.status === 'completed').length,
+  };
+  const filteredTasks = myTasks.filter(t => t.status === activeTab);
+
+  const priorityColor = (p: string) => {
+    if (p === 'high') return 'bg-red-100 text-red-700';
+    if (p === 'medium') return 'bg-amber-100 text-amber-700';
+    return 'bg-slate-100 text-slate-500';
+  };
+  const priorityLabel = (p: string) => p === 'high' ? 'عاجل' : p === 'medium' ? 'متوسط' : 'منخفض';
+  const typeIcon = (t: string) => {
+    const map: Record<string, string> = { 'سباكة': 'plumbing', 'كهرباء': 'electrical_services', 'تكييف': 'ac_unit', 'دهانات': 'format_paint', 'مكافحة': 'pest_control' };
+    return map[t] || 'build';
+  };
+
+  const advanceStatus = (id: string) => {
+    setTasks(prev => prev.map(t => {
+      if (t.id !== id) return t;
+      const next = t.status === 'new' ? 'in_progress' : t.status === 'in_progress' ? 'completed' : 'completed';
+      return { ...t, status: next };
+    }));
+  };
+
+  const tabs: { key: 'new' | 'in_progress' | 'completed'; label: string }[] = [
+    { key: 'new', label: 'جديد' },
+    { key: 'in_progress', label: 'قيد التنفيذ' },
+    { key: 'completed', label: 'مكتمل' },
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#f8f8f5] pb-24">
+      {/* Header */}
+      <header className="bg-brand-dark text-white p-5 sticky top-0 z-50">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="size-12 gold-gradient rounded-full flex items-center justify-center text-brand-dark font-black text-xl shadow-lg">
+              {techName[0]}
+            </div>
+            <div>
+              <h1 className="text-base font-black">{techName}</h1>
+              <p className="text-[10px] text-slate-400">فني صيانة • رمز الإبداع</p>
+            </div>
+          </div>
+          <button onClick={() => onSelect('welcome')} className="p-2 text-slate-400 hover:text-white transition-colors">
+            <Icon name="logout" />
+          </button>
+        </div>
+      </header>
+
+      {/* Stats row */}
+      <div className="bg-white border-b border-slate-100 px-4 py-4">
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: 'جديد', count: tabCounts.new, icon: 'inbox', color: 'text-blue-600', bg: 'bg-blue-50' },
+            { label: 'قيد التنفيذ', count: tabCounts.in_progress, icon: 'construction', color: 'text-amber-600', bg: 'bg-amber-50' },
+            { label: 'مكتمل', count: tabCounts.completed, icon: 'task_alt', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+          ].map((stat, i) => (
+            <div key={i} className="flex flex-col items-center gap-1 p-2 rounded-2xl bg-slate-50">
+              <div className={cn("size-8 rounded-xl flex items-center justify-center", stat.bg, stat.color)}>
+                <Icon name={stat.icon} className="text-base" />
+              </div>
+              <p className="text-lg font-black text-brand-dark">{toArabicDigits(stat.count)}</p>
+              <p className="text-[9px] font-bold text-slate-400">{stat.label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Tab bar */}
+      <div className="flex gap-2 px-4 py-3 bg-white sticky top-[73px] z-40 border-b border-slate-100">
+        {tabs.map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={cn(
+              "flex-1 py-2 rounded-xl text-xs font-bold transition-all",
+              activeTab === tab.key ? "bg-brand-dark text-white shadow-md" : "bg-slate-50 text-slate-500 hover:bg-slate-100"
+            )}
+          >
+            {tab.label}
+            {tabCounts[tab.key] > 0 && (
+              <span className={cn("mr-1 inline-block text-[9px] font-black px-1 rounded-full", activeTab === tab.key ? 'bg-white/20' : 'bg-slate-200')}>
+                {toArabicDigits(tabCounts[tab.key])}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      <main className="p-4 space-y-3">
+        <AnimatePresence mode="popLayout">
+          {filteredTasks.map(task => (
+            <motion.div
+              key={task.id}
+              layout
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-primary shrink-0">
+                    <Icon name={typeIcon(task.type)} className="text-xl" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-brand-dark">{task.type}</h4>
+                    <p className="text-[10px] text-slate-400">{task.property} — {task.unit}</p>
+                    <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                      <Icon name="calendar_today" className="text-[10px]" />
+                      {task.date}
+                    </p>
+                  </div>
+                </div>
+                <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0", priorityColor(task.priority))}>
+                  {priorityLabel(task.priority)}
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl mb-3 leading-relaxed">{task.description}</p>
+
+              {task.status !== 'completed' && (
+                <button
+                  onClick={() => advanceStatus(task.id)}
+                  className={cn(
+                    "w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all",
+                    task.status === 'new'
+                      ? "bg-primary/10 text-primary hover:bg-primary hover:text-brand-dark"
+                      : "bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white"
+                  )}
+                >
+                  <Icon name={task.status === 'new' ? 'play_circle' : 'check_circle'} className="text-sm" />
+                  {task.status === 'new' ? 'بدء التنفيذ' : 'تحديد كمكتمل'}
+                </button>
+              )}
+              {task.status === 'completed' && (
+                <div className="flex items-center justify-center gap-2 text-emerald-600 text-xs font-bold py-2 bg-emerald-50 rounded-xl">
+                  <Icon name="task_alt" className="text-sm" />
+                  تم الإنجاز
+                </div>
+              )}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+
+        {filteredTasks.length === 0 && (
+          <div className="py-16 text-center">
+            <Icon name="check_circle" className="text-5xl text-slate-200 mb-3" />
+            <p className="text-slate-400 font-bold">لا توجد مهام في هذه الفئة</p>
+          </div>
+        )}
+      </main>
+
+      {/* Bottom Nav */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 flex justify-around items-center py-3 pb-6 px-2 z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
+        <button className="flex flex-col items-center gap-1 text-primary relative px-3 py-1 rounded-2xl">
+          <div className="absolute inset-0 bg-primary/5 rounded-2xl" />
+          <Icon name="home" className="text-2xl relative z-10" filled />
+          <span className="text-[10px] font-black relative z-10">المهام</span>
+        </button>
+        <button onClick={() => onSelect('new_maintenance')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 px-3 py-1">
+          <Icon name="add_circle" className="text-2xl" />
+          <span className="text-[10px] font-black">طلب جديد</span>
+        </button>
+        <button onClick={() => onSelect('support')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 px-3 py-1">
+          <Icon name="support_agent" className="text-2xl" />
+          <span className="text-[10px] font-black">الدعم</span>
+        </button>
+        <button onClick={() => onSelect('welcome')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-red-500 px-3 py-1">
+          <Icon name="logout" className="text-2xl" />
+          <span className="text-[10px] font-black">خروج</span>
+        </button>
+      </nav>
+    </div>
   );
 };
 
