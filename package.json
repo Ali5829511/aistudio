@@ -8,6 +8,8 @@
     "dev:server": "tsx watch server/index.ts",
     "dev:full": "npx concurrently -n API,VITE -c cyan,yellow \"npm run dev:server\" \"npm run dev\"",
     "build": "vite build",
+    "build:full": "npm run build && echo '[build] Frontend built. Run npm start to serve.'",
+    "start": "NODE_ENV=production node --import tsx/esm server/index.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"

@@ -1,6 +1,8 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { db, mapTenant, mapContract, mapMaintenance } from './db.js';
 
 const app = express();
@@ -211,8 +213,32 @@ app.get('/api/invoices', (_req, res) => {
 });
 
 // ── Start ─────────────────────────────────────────────────────────────────
+
+// In production, serve the Vite-built frontend from dist/
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const isProduction = process.env.NODE_ENV === 'production';
+
+if (isProduction) {
+  const distPath = path.resolve(__dirname, '../dist');
+  // Rate-limit the SPA fallback (hardcoded path — guards against request flooding)
+  const staticLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 300,
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  app.use(express.static(distPath));
+  // SPA fallback — must come after all API routes
+  app.get('*', staticLimiter, (_req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
+
 app.listen(PORT, () => {
   console.log(`[API] Server running on http://localhost:${PORT}`);
+  if (isProduction) {
+    console.log(`[API] Serving frontend from dist/ — open http://localhost:${PORT}`);
+  }
 });
 
 export default app;
