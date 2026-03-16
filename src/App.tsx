@@ -49,7 +49,8 @@ type View =
   | 'property_report'
   | 'official_print'
   | 'publish'
-  | 'ai_assistant';
+  | 'ai_assistant'
+  | 'payment';
 
 // --- Constants & Mock Data ---
 
@@ -149,6 +150,34 @@ const UNITS = [
   { id: '15', type: 'فيلا', property: PROPERTIES[11].name, rent: '9,500', status: 'مؤجرة' },
   { id: '502', type: 'شقة', property: PROPERTIES[0].name, rent: '5,200', status: 'شاغرة' },
   { id: '104', type: 'شقة', property: PROPERTIES[1].name, rent: '4,800', status: 'مؤجرة' },
+];
+
+const TENANTS = [
+  { id: '1', name: 'محمد العتيبي', unit: 'شقة ٤٠٢', property: PROPERTIES[1].name, phone: '٠٥٠١٢٣٤٥٦٧', paid: true, status: 'active', rent: '4,800', contractEnd: '٢٠٢٤/١٢/٣١' },
+  { id: '2', name: 'سارة القحطاني', unit: 'فيلا ٧', property: PROPERTIES[6].name, phone: '٠٥٥٩٨٧٦٥٤٣', paid: false, status: 'active', rent: '8,000', contractEnd: '٢٠٢٥/٠٣/٢٠' },
+  { id: '3', name: 'عبدالله الشمري', unit: 'مكتب ١٠١', property: PROPERTIES[4].name, phone: '٠٥٤٣٢١٠٩٨٧', paid: true, status: 'expiring', rent: '4,500', contractEnd: '٢٠٢٤/٠٦/٣٠' },
+  { id: '4', name: 'فاطمة الزهراني', unit: 'شقة ٢٠٥', property: PROPERTIES[10].name, phone: '٠٥٦٧٨٩٠١٢٣', paid: false, status: 'late', rent: '3,800', contractEnd: '٢٠٢٤/٠٩/١٥' },
+  { id: '5', name: 'خالد حسن المالكي', unit: 'شقة ١٠٤', property: PROPERTIES[1].name, phone: '٠٥٠٠١١٢٢٣٣', paid: true, status: 'active', rent: '4,800', contractEnd: '٢٠٢٥/٠١/٠١' },
+  { id: '6', name: 'نورة الدوسري', unit: 'فيلا ١٥', property: PROPERTIES[11].name, phone: '٠٥٣٤٥٦٧٨٩٠', paid: true, status: 'active', rent: '9,500', contractEnd: '٢٠٢٥/٠٢/١٠' },
+  { id: '7', name: 'أحمد سالم البلوي', unit: 'شقة ١٠٢', property: PROPERTIES[0].name, phone: '٠٥٦٦٧٧٨٨٩٩', paid: false, status: 'late', rent: '5,200', contractEnd: '٢٠٢٤/٠٨/٠١' },
+  { id: '8', name: 'ريم الحربي', unit: 'مكتب ٣٠١', property: PROPERTIES[9].name, phone: '٠٥١٢٣٤٥٦٧٨', paid: true, status: 'active', rent: '15,000', contractEnd: '٢٠٢٤/١١/٣٠' },
+];
+
+const OWNERS = [
+  { id: '1', name: 'عبد الرحمن السديري', properties: 5, phone: '٠٥٠١٢٣٤٥٦٧', status: 'نشط', totalRevenue: '٤٥,٠٠٠', email: 'sidirey@example.com' },
+  { id: '2', name: 'شركة نجد للاستثمار', properties: 12, phone: '٠١١٤٥٦٧٨٩٠', status: 'نشط', totalRevenue: '١٢٠,٠٠٠', email: 'najd@invest.com' },
+  { id: '3', name: 'فهد بن سلطان', properties: 3, phone: '٠٥٥٩٨٧٦٥٤٣', status: 'غير نشط', totalRevenue: '١٨,٠٠٠', email: 'fahad@example.com' },
+  { id: '4', name: 'مريم الخليفة', properties: 2, phone: '٠٥٤٤٣٣٢٢١١', status: 'نشط', totalRevenue: '٢٢,٠٠٠', email: 'mariam@example.com' },
+  { id: '5', name: 'مجموعة الفهد العقارية', properties: 8, phone: '٠١١٢٢٣٣٤٤٥', status: 'نشط', totalRevenue: '٩٥,٠٠٠', email: 'alfahd@group.com' },
+];
+
+const CONTRACTS = [
+  { id: '1', tenant: 'محمد العتيبي', unit: 'شقة ٤٠٢', property: PROPERTIES[1].name, start: '٢٠٢٤/٠١/٠١', end: '٢٠٢٤/١٢/٣١', rent: '4,800', status: 'ساري' },
+  { id: '2', tenant: 'شركة الأفق', unit: 'مكتب ٥', property: PROPERTIES[4].name, start: '٢٠٢٣/٠٧/١', end: '٢٠٢٤/٠٦/١٥', rent: '12,000', status: 'ينتهي قريباً' },
+  { id: '3', tenant: 'سارة العمري', unit: 'فيلا ١٢', property: PROPERTIES[6].name, start: '٢٠٢٤/٠١/٢٠', end: '٢٠٢٥/٠١/٢٠', rent: '8,000', status: 'ساري' },
+  { id: '4', tenant: 'فاطمة الزهراني', unit: 'شقة ٢٠٥', property: PROPERTIES[10].name, start: '٢٠٢٣/١٠/١', end: '٢٠٢٤/٠٩/١٥', rent: '3,800', status: 'منتهي' },
+  { id: '5', tenant: 'خالد المالكي', unit: 'شقة ١٠٤', property: PROPERTIES[1].name, start: '٢٠٢٤/٠١/٠١', end: '٢٠٢٥/٠١/٠١', rent: '4,800', status: 'ساري' },
+  { id: '6', tenant: 'نورة الدوسري', unit: 'فيلا ١٥', property: PROPERTIES[11].name, start: '٢٠٢٤/٠٢/١٠', end: '٢٠٢٥/٠٢/١٠', rent: '9,500', status: 'ساري' },
 ];
 
 // --- Shared Components ---
@@ -627,16 +656,42 @@ const ManagerDashboard = ({ onSelect, onSelectProperty }: { onSelect: (v: View) 
             ))}
           </div>
         </section>
+
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-black text-brand-dark">إدارة العمليات</h3>
+            <div className="h-px flex-grow mx-6 bg-slate-100"></div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {[
+              { label: 'المستأجرون', icon: 'group', bg: 'bg-blue-50', color: 'text-blue-600', badge: toArabicDigits(TENANTS.length), view: 'tenants_management' },
+              { label: 'الملاك', icon: 'real_estate_agent', bg: 'bg-emerald-50', color: 'text-emerald-600', badge: toArabicDigits(OWNERS.length), view: 'owners' },
+              { label: 'العقود', icon: 'history_edu', bg: 'bg-amber-50', color: 'text-amber-600', badge: toArabicDigits(CONTRACTS.length), view: 'contracts' },
+              { label: 'الوحدات', icon: 'door_front', bg: 'bg-violet-50', color: 'text-violet-600', badge: toArabicDigits(UNITS.length), view: 'units' },
+              { label: 'الموردون', icon: 'engineering', bg: 'bg-orange-50', color: 'text-orange-600', badge: '٣', view: 'vendors_management' },
+              { label: 'الأصول', icon: 'inventory', bg: 'bg-rose-50', color: 'text-rose-600', badge: '٤', view: 'asset_management' },
+            ].map((item, i) => (
+              <motion.button
+                key={i}
+                whileHover={{ y: -4, scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => onSelect(item.view as View)}
+                className="bg-white p-5 rounded-[1.5rem] shadow-sm border border-slate-100 flex flex-col gap-3 text-right hover:shadow-md transition-all"
+              >
+                <div className="flex items-center justify-between">
+                  <div className={cn("size-11 rounded-xl flex items-center justify-center", item.bg, item.color)}>
+                    <Icon name={item.icon} className="text-xl" />
+                  </div>
+                  <span className="text-xs font-black bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{item.badge}</span>
+                </div>
+                <p className="text-sm font-black text-brand-dark">{item.label}</p>
+              </motion.button>
+            ))}
+          </div>
+        </section>
       </main>
 
       <BottomNav active="manager_dashboard" onSelect={onSelect} />
-    </div>
-  );
-};
-
-const AccountingScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
-  const pieData = [
-    { name: 'إيجارات', value: 70, color: '#C5A059' },
     { name: 'رسوم خدمات', value: 20, color: '#121212' },
     { name: 'أخرى', value: 10, color: '#94a3b8' },
   ];
