@@ -1,0 +1,48 @@
+{
+  "entities": {
+    "Property": {
+      "title": "Property",
+      "description": "A real estate property",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "location": { "type": "string" },
+        "units": { "type": "number" },
+        "type": { "type": "string" },
+        "status": { "type": "string" },
+        "deedNumber": { "type": "string" },
+        "deedDate": { "type": "string" },
+        "deedIssuer": { "type": "string" },
+        "documentNumber": { "type": "string" },
+        "plotNumber": { "type": "string" },
+        "planNumber": { "type": "string" },
+        "deedArea": { "type": "string" },
+        "deedType": { "type": "string" },
+        "cadastralNumber": { "type": "string" },
+        "cadastralDate": { "type": "string" },
+        "cadastralStatus": { "type": "string" },
+        "region": { "type": "string" },
+        "city": { "type": "string" },
+        "district": { "type": "string" },
+        "nationalAddress": { "type": "string" },
+        "buildingType": { "type": "string" },
+        "usagePurpose": { "type": "string" },
+        "floorsCount": { "type": "string" },
+        "elevatorsCount": { "type": "string" },
+        "parkingCount": { "type": "string" },
+        "facilities": { "type": "array", "items": { "type": "string" } },
+        "ownerName": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "ownerPhone": { "type": "string" },
+        "ownerEmail": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "properties/{propertyId}": {
+      "schema": { "$ref": "#/entities/Property" },
+      "description": "Stores properties"
+    }
+  }
+}

@@ -1,0 +1,62 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: properties
+    // Document ID: auto-generated
+    // Fields:
+    //   - name: string
+    //   - location: string
+    //   - units: number
+    //   - type: string
+    //   - status: string
+    //   - deedNumber: string
+    //   - deedDate: string
+    //   - deedIssuer: string
+    //   - documentNumber: string
+    //   - plotNumber: string
+    //   - planNumber: string
+    //   - deedArea: string
+    //   - deedType: string
+    //   - cadastralNumber: string
+    //   - cadastralDate: string
+    //   - cadastralStatus: string
+    //   - region: string
+    //   - city: string
+    //   - district: string
+    //   - nationalAddress: string
+    //   - buildingType: string
+    //   - usagePurpose: string
+    //   - floorsCount: string
+    //   - elevatorsCount: string
+    //   - parkingCount: string
+    //   - facilities: list
+    //   - ownerName: string
+    //   - ownerId: string
+    //   - ownerPhone: string
+    //   - ownerEmail: string
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+       return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.email == "aliayashi522@gmail.com";
+    }
+
+    // Properties Collection
+    match /properties/{propertyId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+  }
+}
