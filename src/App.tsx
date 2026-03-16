@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, BarChart, Bar, Legend
+  PieChart, Pie, Cell, BarChart, Bar, Legend, AreaChart, Area
 } from 'recharts';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -5221,6 +5221,8 @@ export default function App() {
       case 'publish': return <PublishingScreen onSelect={setCurrentView} />;
       case 'ai_assistant': return <AIAssistantScreen onSelect={setCurrentView} />;
       case 'payment': return <PaymentScreen onSelect={setCurrentView} />;
+      case 'owner_dashboard': return <OwnerDashboard onSelect={setCurrentView} />;
+      case 'tech_portal': return <TechPortal onSelect={setCurrentView} />;
       default: return <WelcomeScreen onSelect={setCurrentView} />;
     }
   };
