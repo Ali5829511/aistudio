@@ -114,3 +114,15 @@ export const apiUpdateContract = (id: string, updates: { status?: string; end?: 
 /** Update unit status */
 export const apiUpdateUnitStatus = (id: string, status: string) =>
   patch<Unit>(`/units/${id}`, { status });
+
+// ── Auth ──────────────────────────────────────────────────────────────────
+export interface AdminUser {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+}
+
+/** Login with email + password — returns user info or throws */
+export const apiLogin = (email: string, password: string) =>
+  post<AdminUser>('/auth/login', { email, password });

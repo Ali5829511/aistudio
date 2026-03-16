@@ -1,4 +1,5 @@
 import Database from 'better-sqlite3';
+import bcrypt from 'bcryptjs';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -85,6 +86,15 @@ db.exec(`
     phone   TEXT NOT NULL DEFAULT '',
     jobs    INTEGER NOT NULL DEFAULT 0,
     city    TEXT NOT NULL DEFAULT ''
+  );
+
+  CREATE TABLE IF NOT EXISTS users (
+    id            TEXT PRIMARY KEY,
+    email         TEXT NOT NULL UNIQUE,
+    name          TEXT NOT NULL,
+    role          TEXT NOT NULL DEFAULT 'admin',
+    password_hash TEXT NOT NULL,
+    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
   );
 `);
 
@@ -225,6 +235,19 @@ function seed() {
     for (const row of vendorRows) seedVendor.run(...row);
   });
   insertVendors();
+
+  // ── Admin user seed ────────────────────────────────────────────────────
+  const adminEmail = 'aliayashi522@gmail.com';
+  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(adminEmail);
+  if (!existing) {
+    const defaultPassword = process.env.ADMIN_PASSWORD ?? 'Admin@1234';
+    const hash = bcrypt.hashSync(defaultPassword, 10);
+    db.prepare(
+      `INSERT INTO users (id, email, name, role, password_hash)
+       VALUES (?, ?, ?, ?, ?)`
+    ).run('admin-1', adminEmail, 'علي الياشي', 'admin', hash);
+    console.log(`[DB] Admin user seeded: ${adminEmail}`);
+  }
 }
 
 seed();

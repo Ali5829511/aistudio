@@ -1,4 +1,6 @@
 import express from 'express';
+import bcrypt from 'bcryptjs';
+import rateLimit from 'express-rate-limit';
 import { db, mapTenant, mapContract, mapMaintenance } from './db.js';
 
 const app = express();
@@ -14,6 +16,30 @@ app.use((_req, res, next) => {
   next();
 });
 app.options('*', (_req, res) => res.sendStatus(204));
+
+// ── Rate limiting ─────────────────────────────────────────────────────────
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,                   // max 10 attempts per window per IP
+  message: { error: 'عدد كبير من محاولات الدخول، يرجى المحاولة بعد 15 دقيقة' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// ── Auth ──────────────────────────────────────────────────────────────────
+app.post('/api/auth/login', loginLimiter, (req, res) => {
+  const { email, password } = req.body as { email?: string; password?: string };
+  if (!email || !password)
+    return res.status(400).json({ error: 'البريد الإلكتروني وكلمة المرور مطلوبان' });
+
+  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email) as
+    { id: string; email: string; name: string; role: string; password_hash: string } | undefined;
+
+  if (!user || !bcrypt.compareSync(password, user.password_hash))
+    return res.status(401).json({ error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة' });
+
+  res.json({ id: user.id, email: user.email, name: user.name, role: user.role });
+});
 
 // ── Health ────────────────────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => {

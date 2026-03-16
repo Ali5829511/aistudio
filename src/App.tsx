@@ -11,8 +11,9 @@ import {
   apiGetOwners, apiGetContracts, apiGetVendors, apiGetInvoices,
   apiUpdateMaintenanceStatus, apiCreateMaintenance, apiRecordPayment,
   apiAddProperty, apiCreateContract, apiUpdateContract,
+  apiLogin,
   type Property, type MaintenanceRequest, type Unit, type Tenant,
-  type Owner, type Contract, type Vendor, type Invoice,
+  type Owner, type Contract, type Vendor, type Invoice, type AdminUser,
 } from './api.ts';
 
 // --- Utility ---
@@ -28,6 +29,7 @@ const toArabicDigits = (num: number | string) => {
 // --- Types ---
 type View = 
   | 'welcome' 
+  | 'login'
   | 'manager_dashboard' 
   | 'accounting' 
   | 'invoices' 
@@ -366,9 +368,151 @@ const Logo = ({ className = "size-32" }: { className?: string }) => (
   </div>
 );
 
+// ── Login Screen (Admin) ──────────────────────────────────────────────────
+const LoginScreen = ({
+  onSuccess,
+  onBack,
+}: {
+  onSuccess: (user: AdminUser) => void;
+  onBack: () => void;
+}) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (!email.trim() || !password.trim()) {
+      setError('يرجى إدخال البريد الإلكتروني وكلمة المرور');
+      return;
+    }
+    setLoading(true);
+    try {
+      const user = await apiLogin(email.trim(), password);
+      onSuccess(user);
+    } catch {
+      setError('البريد الإلكتروني أو كلمة المرور غير صحيحة');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-primary/30 flex flex-col items-center justify-center p-6" dir="rtl">
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-sm"
+      >
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center size-16 bg-primary rounded-2xl shadow-xl shadow-primary/30 mb-4">
+            <Icon name="corporate_fare" className="text-3xl text-white" />
+          </div>
+          <h1 className="text-2xl font-black text-white">سمات</h1>
+          <p className="text-slate-400 text-sm mt-1">بوابة مديري العقارات</p>
+        </div>
+
+        {/* Card */}
+        <div className="bg-white rounded-3xl shadow-2xl p-7">
+          <h2 className="text-lg font-black text-brand-dark mb-1">تسجيل الدخول</h2>
+          <p className="text-xs text-slate-400 mb-6">أدخل بياناتك للوصول إلى لوحة التحكم</p>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Email */}
+            <div>
+              <label className="text-xs font-bold text-slate-500 mb-1 block">البريد الإلكتروني</label>
+              <div className="relative">
+                <Icon name="email" className="absolute right-3 top-3 text-slate-400 text-lg" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="admin@example.com"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pr-10 pl-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                  autoComplete="email"
+                  dir="ltr"
+                />
+              </div>
+            </div>
+
+            {/* Password */}
+            <div>
+              <label className="text-xs font-bold text-slate-500 mb-1 block">كلمة المرور</label>
+              <div className="relative">
+                <Icon name="lock" className="absolute right-3 top-3 text-slate-400 text-lg" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pr-10 pl-10 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                  autoComplete="current-password"
+                  dir="ltr"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  className="absolute left-3 top-3 text-slate-400 hover:text-slate-600"
+                  tabIndex={-1}
+                >
+                  <Icon name={showPassword ? 'visibility_off' : 'visibility'} className="text-lg" />
+                </button>
+              </div>
+            </div>
+
+            {/* Error */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2 bg-red-50 text-red-600 text-xs font-bold px-3 py-2.5 rounded-xl"
+              >
+                <Icon name="error_outline" className="text-base" />
+                {error}
+              </motion.div>
+            )}
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 rounded-xl bg-primary text-white font-black text-sm shadow-md shadow-primary/25 hover:bg-primary/90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+            >
+              {loading ? (
+                <>
+                  <Icon name="autorenew" className="text-base animate-spin" />
+                  جاري التحقق...
+                </>
+              ) : (
+                <>
+                  <Icon name="login" className="text-base" />
+                  دخول
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+
+        {/* Back */}
+        <button
+          onClick={onBack}
+          className="mt-6 w-full text-slate-400 text-xs flex items-center justify-center gap-1 hover:text-white transition-colors"
+        >
+          <Icon name="arrow_forward" className="text-sm" />
+          العودة للصفحة الرئيسية
+        </button>
+      </motion.div>
+    </div>
+  );
+};
+
 const WelcomeScreen = ({ onSelect }: { onSelect: (view: View) => void }) => {
   const accountTypes = [
-    { id: 'manager_dashboard', title: 'مكتب العقارات / مديرو العقارات', icon: 'corporate_fare', desc: 'إدارة متكاملة للمحافظ العقارية' },
+    { id: 'login', title: 'مكتب العقارات / مديرو العقارات', icon: 'corporate_fare', desc: 'إدارة متكاملة للمحافظ العقارية' },
     { id: 'owner_dashboard', title: 'المالك / أصحاب العقارات', icon: 'real_estate_agent', desc: 'متابعة الأداء المالي لعقاراتك' },
     { id: 'tenant_dashboard', title: 'المستأجر / سكان الوحدات', icon: 'person_pin_circle', desc: 'خدمات المستأجرين والدفع الإلكتروني' },
     { id: 'tech_portal', title: 'بوابة الفنيين', icon: 'construction', desc: 'إدارة طلبات الصيانة والمهام' },
@@ -6347,6 +6491,15 @@ export default function App() {
   const [currentView, setCurrentView] = useState<View>('welcome');
   const [selectedProperty, setSelectedProperty] = useState(PROPERTIES[0]);
   const [propertyFormsCategory, setPropertyFormsCategory] = useState('الكل');
+  // Restore admin session from sessionStorage on page load
+  const [loggedInAdmin, setLoggedInAdmin] = useState<AdminUser | null>(() => {
+    try {
+      const stored = sessionStorage.getItem('admin_session');
+      return stored ? (JSON.parse(stored) as AdminUser) : null;
+    } catch {
+      return null;
+    }
+  });
 
   const navigateToForms = (category: string) => {
     setPropertyFormsCategory(category);
@@ -6358,6 +6511,29 @@ export default function App() {
     setCurrentView(view);
   };
 
+  // When navigating to manager screens, ensure admin is logged in
+  const handleNavigate = (view: View) => {
+    const managerViews: View[] = [
+      'manager_dashboard', 'accounting', 'invoices', 'maintenance',
+      'property_details', 'new_maintenance', 'settings', 'reports',
+      'add_property', 'owners', 'units', 'contracts', 'notifications',
+      'support', 'docs', 'financial_report', 'zakat_tax', 'ejar_integration',
+      'tech_performance', 'dev_center', 'archive', 'tenant_satisfaction',
+      'tenants_management', 'vendors_management', 'asset_management',
+      'publish', 'ai_assistant', 'msg_templates', 'property_forms',
+      'property_report', 'official_print',
+    ];
+    if (view === 'welcome') {
+      try { sessionStorage.removeItem('admin_session'); } catch {}
+      setLoggedInAdmin(null); // logout
+    }
+    if (managerViews.includes(view) && !loggedInAdmin) {
+      setCurrentView('login');
+    } else {
+      setCurrentView(view);
+    }
+  };
+
   useEffect(() => {
     (window as any).selectProperty = (p: any) => setSelectedProperty(p);
     return () => { delete (window as any).selectProperty; };
@@ -6365,42 +6541,52 @@ export default function App() {
 
   const renderView = () => {
     switch (currentView) {
-      case 'welcome': return <WelcomeScreen onSelect={setCurrentView} />;
-      case 'manager_dashboard': return <ManagerDashboard onSelect={setCurrentView} onSelectProperty={handleSelectProperty} />;
-      case 'accounting': return <AccountingScreen onSelect={setCurrentView} />;
-      case 'invoices': return <InvoicesScreen onSelect={setCurrentView} />;
-      case 'maintenance': return <MaintenanceScreen onSelect={setCurrentView} />;
-      case 'property_details': return <PropertyDetailsScreen onSelect={setCurrentView} property={selectedProperty} />;
-      case 'new_maintenance': return <NewMaintenanceRequestScreen onSelect={setCurrentView} />;
+      case 'welcome': return <WelcomeScreen onSelect={handleNavigate} />;
+      case 'login': return (
+        <LoginScreen
+          onSuccess={(user) => {
+            try { sessionStorage.setItem('admin_session', JSON.stringify(user)); } catch {}
+            setLoggedInAdmin(user);
+            setCurrentView('manager_dashboard');
+          }}
+          onBack={() => setCurrentView('welcome')}
+        />
+      );
+      case 'manager_dashboard': return <ManagerDashboard onSelect={handleNavigate} onSelectProperty={handleSelectProperty} />;
+      case 'accounting': return <AccountingScreen onSelect={handleNavigate} />;
+      case 'invoices': return <InvoicesScreen onSelect={handleNavigate} />;
+      case 'maintenance': return <MaintenanceScreen onSelect={handleNavigate} />;
+      case 'property_details': return <PropertyDetailsScreen onSelect={handleNavigate} property={selectedProperty} />;
+      case 'new_maintenance': return <NewMaintenanceRequestScreen onSelect={handleNavigate} />;
       case 'tenant_dashboard': return <TenantDashboard onSelect={setCurrentView} onNavigateForms={navigateToForms} />;
-      case 'settings': return <SettingsScreen onSelect={setCurrentView} />;
-      case 'reports': return <ReportsScreen onSelect={setCurrentView} />;
-      case 'add_property': return <AddPropertyScreen onSelect={setCurrentView} />;
-      case 'owners': return <OwnersManagementScreen onSelect={setCurrentView} />;
-      case 'units': return <UnitsManagementScreen onSelect={setCurrentView} />;
-      case 'contracts': return <ContractsManagementScreen onSelect={setCurrentView} />;
-      case 'support': return <SupportScreen onSelect={setCurrentView} />;
-      case 'docs': return <TechnicalDocsScreen onSelect={setCurrentView} />;
-      case 'notifications': return <NotificationsScreen onSelect={setCurrentView} />;
-      case 'financial_report': return <FinancialReportScreen onSelect={setCurrentView} />;
-      case 'property_report': return <PropertyReportScreen onSelect={setCurrentView} property={selectedProperty} />;
-      case 'official_print': return <OfficialPrintScreen onSelect={setCurrentView} property={selectedProperty} />;
-      case 'zakat_tax': return <ZakatTaxScreen onSelect={setCurrentView} />;
-      case 'ejar_integration': return <EjarIntegrationScreen onSelect={setCurrentView} />;
-      case 'tech_performance': return <TechPerformanceScreen onSelect={setCurrentView} />;
-      case 'dev_center': return <DeveloperCenterScreen onSelect={setCurrentView} />;
-      case 'archive': return <ArchiveScreen onSelect={setCurrentView} />;
-      case 'tenant_satisfaction': return <TenantSatisfactionReportScreen onSelect={setCurrentView} />;
-      case 'tenants_management': return <TenantsManagementScreen onSelect={setCurrentView} />;
-      case 'vendors_management': return <VendorsManagementScreen onSelect={setCurrentView} />;
-      case 'asset_management': return <AssetManagementScreen onSelect={setCurrentView} />;
-      case 'publish': return <PublishingScreen onSelect={setCurrentView} />;
-      case 'ai_assistant': return <AIAssistantScreen onSelect={setCurrentView} />;
+      case 'settings': return <SettingsScreen onSelect={handleNavigate} />;
+      case 'reports': return <ReportsScreen onSelect={handleNavigate} />;
+      case 'add_property': return <AddPropertyScreen onSelect={handleNavigate} />;
+      case 'owners': return <OwnersManagementScreen onSelect={handleNavigate} />;
+      case 'units': return <UnitsManagementScreen onSelect={handleNavigate} />;
+      case 'contracts': return <ContractsManagementScreen onSelect={handleNavigate} />;
+      case 'support': return <SupportScreen onSelect={handleNavigate} />;
+      case 'docs': return <TechnicalDocsScreen onSelect={handleNavigate} />;
+      case 'notifications': return <NotificationsScreen onSelect={handleNavigate} />;
+      case 'financial_report': return <FinancialReportScreen onSelect={handleNavigate} />;
+      case 'property_report': return <PropertyReportScreen onSelect={handleNavigate} property={selectedProperty} />;
+      case 'official_print': return <OfficialPrintScreen onSelect={handleNavigate} property={selectedProperty} />;
+      case 'zakat_tax': return <ZakatTaxScreen onSelect={handleNavigate} />;
+      case 'ejar_integration': return <EjarIntegrationScreen onSelect={handleNavigate} />;
+      case 'tech_performance': return <TechPerformanceScreen onSelect={handleNavigate} />;
+      case 'dev_center': return <DeveloperCenterScreen onSelect={handleNavigate} />;
+      case 'archive': return <ArchiveScreen onSelect={handleNavigate} />;
+      case 'tenant_satisfaction': return <TenantSatisfactionReportScreen onSelect={handleNavigate} />;
+      case 'tenants_management': return <TenantsManagementScreen onSelect={handleNavigate} />;
+      case 'vendors_management': return <VendorsManagementScreen onSelect={handleNavigate} />;
+      case 'asset_management': return <AssetManagementScreen onSelect={handleNavigate} />;
+      case 'publish': return <PublishingScreen onSelect={handleNavigate} />;
+      case 'ai_assistant': return <AIAssistantScreen onSelect={handleNavigate} />;
       case 'payment': return <PaymentScreen onSelect={setCurrentView} />;
       case 'owner_dashboard': return <OwnerDashboard onSelect={setCurrentView} />;
       case 'tech_portal': return <TechPortal onSelect={setCurrentView} />;
-      case 'msg_templates': return <MessageTemplatesScreen onSelect={setCurrentView} />;
-      case 'property_forms': return <PropertyFormsScreen onSelect={setCurrentView} initialCategory={propertyFormsCategory} />;
+      case 'msg_templates': return <MessageTemplatesScreen onSelect={handleNavigate} />;
+      case 'property_forms': return <PropertyFormsScreen onSelect={handleNavigate} initialCategory={propertyFormsCategory} />;
       default: return <WelcomeScreen onSelect={setCurrentView} />;
     }
   };
