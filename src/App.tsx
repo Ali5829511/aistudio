@@ -2800,7 +2800,13 @@ const ContractsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }
               </div>
               {contract.status !== 'منتهي' ? (
                 <div className="mt-3 grid grid-cols-2 gap-2">
-                  <button className="text-primary text-xs font-bold flex items-center justify-center gap-1 py-2 rounded-xl bg-primary/5 hover:bg-primary/10 transition-colors">
+                  <button
+                    onClick={() => {
+                      const newEnd = new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().slice(0, 10);
+                      renewContract(contract.id, newEnd);
+                    }}
+                    className="text-primary text-xs font-bold flex items-center justify-center gap-1 py-2 rounded-xl bg-primary/5 hover:bg-primary/10 transition-colors"
+                  >
                     <Icon name="refresh" className="text-xs" /> تجديد العقد
                   </button>
                   <button
