@@ -1735,24 +1735,24 @@ const TenantDashboard = ({ onSelect }: { onSelect: (v: View) => void }) => {
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-2 pb-6 z-50 flex justify-between items-center">
-        <button className="flex flex-col items-center gap-1 text-primary">
+        <button onClick={() => onSelect('tenant_dashboard')} className="flex flex-col items-center gap-1 text-primary">
           <Icon name="home" className="filled" />
           <span className="text-[10px] font-bold">الرئيسية</span>
         </button>
-        <button className="flex flex-col items-center gap-1 text-slate-400">
+        <button onClick={() => onSelect('payment')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors">
           <Icon name="payments" />
           <span className="text-[10px] font-medium">المدفوعات</span>
         </button>
         <div className="relative -top-6">
-          <button className="size-14 bg-primary text-slate-900 rounded-full shadow-lg flex items-center justify-center border-4 border-white">
+          <button onClick={() => onSelect('new_maintenance')} className="size-14 bg-primary text-slate-900 rounded-full shadow-lg flex items-center justify-center border-4 border-white hover:scale-110 transition-transform">
             <Icon name="add" className="text-2xl" />
           </button>
         </div>
-        <button className="flex flex-col items-center gap-1 text-slate-400">
+        <button onClick={() => onSelect('maintenance')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors">
           <Icon name="handyman" />
           <span className="text-[10px] font-medium">الصيانة</span>
         </button>
-        <button className="flex flex-col items-center gap-1 text-slate-400">
+        <button onClick={() => onSelect('settings')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors">
           <Icon name="person" />
           <span className="text-[10px] font-medium">الملف</span>
         </button>
@@ -2757,6 +2757,33 @@ const EjarIntegrationScreen = ({ onSelect }: { onSelect: (v: View) => void }) =>
 };
 
 const TechPerformanceScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const completedRequests = MAINTENANCE_REQUESTS.filter(r => r.status === 'completed');
+  const activeRequests = MAINTENANCE_REQUESTS.filter(r => r.status !== 'completed');
+
+  // Build technician performance from MAINTENANCE_REQUESTS
+  const techMap: Record<string, { name: string; completed: number; active: number }> = {};
+  MAINTENANCE_REQUESTS.forEach(r => {
+    if (!techMap[r.technician]) {
+      techMap[r.technician] = { name: r.technician, completed: 0, active: 0 };
+    }
+    if (r.status === 'completed') techMap[r.technician].completed++;
+    else techMap[r.technician].active++;
+  });
+
+  // Merge with static rating info for display
+  const ratingMap: Record<string, number> = {
+    'أحمد محمود': 4.8,
+    'خالد علي': 4.5,
+    'ياسين حسن': 4.9,
+    'سعيد محمد': 4.2,
+  };
+
+  const techs = Object.values(techMap).map(t => ({
+    ...t,
+    rating: ratingMap[t.name] ?? 4.0,
+    status: t.active > 0 ? 'مشغول' : 'متاح',
+  })).sort((a, b) => b.completed - a.completed);
+
   return (
     <div className="min-h-screen bg-[#f8f8f5] pb-24">
       <header className="flex items-center justify-between p-4 bg-white sticky top-0 z-10 shadow-sm border-b border-primary/10">
@@ -2766,23 +2793,64 @@ const TechPerformanceScreen = ({ onSelect }: { onSelect: (v: View) => void }) =>
         <h2 className="text-lg font-bold flex-1 text-center pr-12">أداء الفنيين</h2>
       </header>
       <main className="p-4 space-y-4">
-        {[
-          { name: 'أحمد الكهربائي', tasks: 24, rating: 4.8, status: 'متاح' },
-          { name: 'شركة السباكة الذهبية', tasks: 18, rating: 4.5, status: 'مشغول' },
-          { name: 'فني تكييف النخبة', tasks: 32, rating: 4.9, status: 'متاح' },
-        ].map((tech, i) => (
-          <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
-            <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center"><Icon name="person" /></div>
-            <div className="flex-1">
-              <h4 className="font-bold text-sm">{tech.name}</h4>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-[10px] text-gray-400">{tech.tasks} مهمة مكتملة</span>
-                <span className="text-[10px] text-yellow-500 flex items-center gap-0.5"><Icon name="star" className="text-[12px] filled" /> {tech.rating}</span>
+        {/* Summary stats */}
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: 'إجمالي الطلبات', value: toArabicDigits(MAINTENANCE_REQUESTS.length), icon: 'build', bg: 'bg-blue-50', color: 'text-blue-600' },
+            { label: 'مكتملة', value: toArabicDigits(completedRequests.length), icon: 'task_alt', bg: 'bg-green-50', color: 'text-green-600' },
+            { label: 'نشطة', value: toArabicDigits(activeRequests.length), icon: 'pending', bg: 'bg-amber-50', color: 'text-amber-600' },
+          ].map((s, i) => (
+            <div key={i} className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center gap-1">
+              <div className={cn("size-9 rounded-xl flex items-center justify-center", s.bg, s.color)}>
+                <Icon name={s.icon} className="text-lg" />
               </div>
+              <p className="text-xl font-black text-brand-dark">{s.value}</p>
+              <p className="text-[9px] font-bold text-slate-400 text-center">{s.label}</p>
             </div>
-            <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${tech.status === 'متاح' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>{tech.status}</span>
-          </div>
-        ))}
+          ))}
+        </div>
+
+        {/* Technician cards */}
+        <section className="space-y-2">
+          <h3 className="text-xs font-bold text-gray-400 px-1">تفاصيل الفنيين</h3>
+          {techs.map((tech, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"
+            >
+              <div className="flex items-center gap-4 mb-3">
+                <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center shrink-0">
+                  <Icon name="person" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-bold text-sm text-brand-dark">{tech.name}</h4>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <Icon name="star" className="text-[10px] text-amber-400" filled />
+                    <span className="text-[10px] font-bold text-slate-500">{tech.rating}</span>
+                  </div>
+                </div>
+                <span className={cn(
+                  "text-[10px] font-bold px-2 py-1 rounded-full",
+                  tech.status === 'متاح' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                )}>
+                  {tech.status}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 pt-3 border-t border-gray-50">
+                <div className="bg-green-50 rounded-xl p-2 text-center">
+                  <p className="text-lg font-black text-green-700">{toArabicDigits(tech.completed)}</p>
+                  <p className="text-[9px] font-bold text-green-600">مكتملة</p>
+                </div>
+                <div className="bg-amber-50 rounded-xl p-2 text-center">
+                  <p className="text-lg font-black text-amber-700">{toArabicDigits(tech.active)}</p>
+                  <p className="text-[9px] font-bold text-amber-600">نشطة</p>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </section>
       </main>
       <BottomNav active="manager_dashboard" onSelect={onSelect} />
     </div>
@@ -2808,22 +2876,31 @@ const AI_QUICK_PROMPTS = [
   { text: 'أضف ميزة جديدة للتطبيق', icon: 'extension' },
 ];
 
-const PROPERTY_CONTEXT = `
+const PROPERTY_CONTEXT = (() => {
+  const totalProps = PROPERTIES.length;
+  const activeTenants = TENANTS.length;
+  const rentedUnits = UNITS.filter(u => u.status === 'مؤجرة').length;
+  const vacantUnits = UNITS.filter(u => u.status === 'شاغرة').length;
+  const occupancyPct = Math.round((rentedUnits / (rentedUnits + vacantUnits)) * 100);
+  const activeMaintenanceRequests = MAINTENANCE_REQUESTS.filter(r => r.status !== 'completed').length;
+  const highPriorityMaintenance = MAINTENANCE_REQUESTS.filter(r => r.priority === 'high' && r.status !== 'completed').length;
+  const expiringContracts = CONTRACTS.filter(c => c.status === 'ينتهي قريباً').length;
+  const cities = [...new Set(PROPERTIES.map(p => p.location.split('،')[0]))].join('، ');
+  return `
 أنت مساعد ذكاء اصطناعي متخصص لنظام إدارة الأملاك - منصة شركة رمز الإبداع.
 البيانات الحالية في النظام:
-- عدد العقارات: 15 عقار (عمارات، أبراج، فيلات، مجمعات تجارية وسكنية)
-- المستأجرين النشطين: 89 مستأجر
-- الوحدات المؤجرة: 142 وحدة | الوحدات الشاغرة: 12 وحدة
-- نسبة الإشغال: 92%
-- إجمالي التحصيل المالي هذا الشهر: 145,500 ريال سعودي (نمو 12.5%)
-- طلبات الصيانة النشطة: 3 طلبات عاجلة
-- عمليات الزكاة والضريبة: بانتظار التقديم (58,000 ريال)
-- حالة منصة إيجار: متصل ومزامن
+- عدد العقارات: ${totalProps} عقار
+- المستأجرين: ${activeTenants} مستأجر
+- الوحدات المؤجرة: ${rentedUnits} | الوحدات الشاغرة: ${vacantUnits}
+- نسبة الإشغال: ${occupancyPct}%
+- طلبات الصيانة النشطة: ${activeMaintenanceRequests} (منها ${highPriorityMaintenance} عالية الأولوية)
+- عقود تنتهي قريباً: ${expiringContracts}
 - التقنيات المستخدمة: React 19، TypeScript، Vite، Tailwind CSS، Recharts، Gemini AI
-- المدن: الرياض، جدة، الدمام
+- المدن: ${cities}
 
 أجب باللغة العربية بأسلوب احترافي ومختصر. إذا سُئلت عن تطوير المشروع أو إضافة ميزات، قدّم اقتراحات عملية مع أمثلة كود عند الحاجة.
 `;
+})();
 
 const AIAssistantScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -3396,6 +3473,34 @@ const DeveloperCenterScreen = ({ onSelect }: { onSelect: (v: View) => void }) =>
 };
 
 const ArchiveScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const categories = [
+    { title: 'صكوك الملكية', count: 24, icon: 'description', color: 'text-blue-600', bg: 'bg-blue-50' },
+    { title: 'عقود الإيجار', count: 158, icon: 'history_edu', color: 'text-primary-dark', bg: 'bg-primary/10' },
+    { title: 'فواتير الصيانة', count: 89, icon: 'receipt_long', color: 'text-orange-600', bg: 'bg-orange-50' },
+    { title: 'مخططات هندسية', count: 12, icon: 'architecture', color: 'text-purple-600', bg: 'bg-purple-50' },
+    { title: 'تقارير المفتشين', count: 34, icon: 'fact_check', color: 'text-green-600', bg: 'bg-green-50' },
+    { title: 'وثائق التأمين', count: 18, icon: 'verified_user', color: 'text-slate-600', bg: 'bg-slate-100' },
+  ];
+
+  const recentFiles = [
+    { name: 'صك ملكية - عمارة النخيل', date: '٢٠٢٤/٠٥/١٠', icon: 'description', size: '٢.٣ ميغابايت' },
+    { name: 'عقد إيجار - محمد العتيبي', date: '٢٠٢٤/٠١/٠١', icon: 'history_edu', size: '١.١ ميغابايت' },
+    { name: 'فاتورة صيانة التكييف - فيلا ١٢', date: '٢٠٢٤/٠٥/٢٢', icon: 'receipt_long', size: '٠.٤ ميغابايت' },
+    { name: 'مخطط طابق ثالث - برج الياسمين', date: '٢٠٢٣/١١/١٥', icon: 'architecture', size: '٥.٧ ميغابايت' },
+    { name: 'عقد إيجار - سارة العمري', date: '٢٠٢٤/٠١/٢٠', icon: 'history_edu', size: '١.٠ ميغابايت' },
+    { name: 'فاتورة كهرباء - برج النخيل', date: '٢٠٢٤/٠٥/٢٦', icon: 'receipt_long', size: '٠.٢ ميغابايت' },
+  ];
+
+  const filteredFiles = searchQuery
+    ? recentFiles.filter(f => f.name.includes(searchQuery) || f.date.includes(searchQuery))
+    : recentFiles;
+
+  const filteredCategories = searchQuery
+    ? categories.filter(c => c.title.includes(searchQuery))
+    : categories;
+
   return (
     <div className="min-h-screen bg-[#f8f8f5] pb-24">
       <header className="flex items-center justify-between p-4 bg-white sticky top-0 z-10 shadow-sm border-b border-primary/10">
@@ -3403,26 +3508,99 @@ const ArchiveScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
           <Icon name="arrow_forward" className="text-2xl" />
         </button>
         <h2 className="text-lg font-bold flex-1 text-center pr-12">الأرشيف العقاري</h2>
+        <button className="p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary/20 transition-colors">
+          <Icon name="upload_file" />
+        </button>
       </header>
-      <main className="p-4 space-y-4">
+      <main className="p-4 space-y-5">
+        {/* Search */}
         <div className="relative">
           <Icon name="search" className="absolute right-3 top-3 text-gray-400" />
-          <input className="w-full rounded-xl border-none bg-white py-3 pr-10 pl-4 shadow-sm text-sm" placeholder="بحث في الوثائق المؤرشفة..." type="text" />
+          <input
+            className="w-full rounded-xl border-none bg-white py-3 pr-10 pl-4 shadow-sm text-sm outline-none"
+            placeholder="بحث في الوثائق المؤرشفة..."
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { title: 'صكوك الملكية', count: 24, icon: 'description' },
-            { title: 'عقود الإيجار', count: 158, icon: 'history_edu' },
-            { title: 'فواتير الصيانة', count: 89, icon: 'receipt_long' },
-            { title: 'مخططات هندسية', count: 12, icon: 'architecture' },
-          ].map((cat, i) => (
-            <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-              <div className="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center mb-3"><Icon name={cat.icon} /></div>
-              <h4 className="font-bold text-sm">{cat.title}</h4>
-              <p className="text-[10px] text-gray-400 mt-1">{cat.count} ملف</p>
+
+        {/* Stats */}
+        {!searchQuery && (
+          <div className="bg-brand-dark text-white p-5 rounded-2xl shadow-lg relative overflow-hidden">
+            <div className="relative z-10 flex items-center justify-between">
+              <div>
+                <p className="text-xs opacity-70 mb-1">إجمالي الملفات المؤرشفة</p>
+                <h3 className="text-3xl font-black">
+                  {toArabicDigits(categories.reduce((s, c) => s + c.count, 0))}
+                </h3>
+              </div>
+              <div className="size-14 gold-gradient rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
+                <Icon name="folder_open" className="text-brand-dark text-2xl" />
+              </div>
             </div>
-          ))}
-        </div>
+            <Icon name="inventory_2" className="absolute -bottom-4 -left-4 text-8xl opacity-10 rotate-12" />
+          </div>
+        )}
+
+        {/* Categories */}
+        {filteredCategories.length > 0 && (
+          <section className="space-y-2">
+            <h3 className="text-xs font-bold text-gray-400 px-1">الفئات</h3>
+            <div className="grid grid-cols-2 gap-3">
+              {filteredCategories.map((cat, i) => (
+                <motion.div
+                  key={i}
+                  whileHover={{ y: -2 }}
+                  className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 cursor-pointer"
+                >
+                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center mb-3", cat.bg, cat.color)}>
+                    <Icon name={cat.icon} />
+                  </div>
+                  <h4 className="font-bold text-sm text-brand-dark">{cat.title}</h4>
+                  <p className="text-[10px] text-gray-400 mt-1">{toArabicDigits(cat.count)} ملف</p>
+                </motion.div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Recent / Filtered Files */}
+        {filteredFiles.length > 0 && (
+          <section className="space-y-2">
+            <h3 className="text-xs font-bold text-gray-400 px-1">
+              {searchQuery ? 'نتائج البحث' : 'أحدث الملفات'}
+            </h3>
+            <div className="space-y-2">
+              {filteredFiles.map((file, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4"
+                >
+                  <div className="w-10 h-10 bg-slate-50 text-primary rounded-xl flex items-center justify-center shrink-0">
+                    <Icon name={file.icon} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-bold text-sm text-brand-dark truncate">{file.name}</h4>
+                    <p className="text-[10px] text-gray-400">{file.date} • {file.size}</p>
+                  </div>
+                  <button className="p-2 bg-slate-50 text-slate-400 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors shrink-0">
+                    <Icon name="download" className="text-sm" />
+                  </button>
+                </motion.div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {searchQuery && filteredFiles.length === 0 && filteredCategories.length === 0 && (
+          <div className="py-12 text-center">
+            <Icon name="search_off" className="text-4xl text-slate-300 mb-2" />
+            <p className="text-slate-400 text-sm">لا توجد نتائج مطابقة</p>
+          </div>
+        )}
       </main>
       <BottomNav active="manager_dashboard" onSelect={onSelect} />
     </div>
