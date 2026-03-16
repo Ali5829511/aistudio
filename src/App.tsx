@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, createContext, useContext } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -6,6 +6,14 @@ import {
 } from 'recharts';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import {
+  apiGetProperties, apiGetMaintenance, apiGetUnits, apiGetTenants,
+  apiGetOwners, apiGetContracts, apiGetVendors, apiGetInvoices,
+  apiUpdateMaintenanceStatus, apiCreateMaintenance, apiRecordPayment,
+  apiAddProperty, apiCreateContract, apiUpdateContract,
+  type Property, type MaintenanceRequest, type Unit, type Tenant,
+  type Owner, type Contract, type Vendor, type Invoice,
+} from './api.ts';
 
 // --- Utility ---
 function cn(...inputs: ClassValue[]) {
@@ -237,6 +245,46 @@ const PROPERTY_FORMS = [
   { id: '8', title: 'نموذج إشعار انتهاء العقد (من المستأجر)', desc: 'إشعار رسمي من المستأجر بنيته الإخلاء', category: 'عقارات', icon: 'event_available', color: 'text-violet-600', bg: 'bg-violet-50', fields: [{ label: 'اسم المستأجر', type: 'text' }, { label: 'رقم الوحدة', type: 'text' }, { label: 'تاريخ الإخلاء المتوقع', type: 'date' }, { label: 'سبب المغادرة', type: 'select', options: ['انتهاء العقد', 'تغيير محل الإقامة', 'شراء مسكن', 'أسباب عائلية', 'أخرى'] }, { label: 'ملاحظات', type: 'textarea' }] },
 ];
 
+// --- App Data Context (live data from SQLite API, seed data as fallback) ---
+
+interface AppData {
+  PROPERTIES:           typeof PROPERTIES;
+  MAINTENANCE_REQUESTS: typeof MAINTENANCE_REQUESTS;
+  UNITS:                typeof UNITS;
+  TENANTS:              typeof TENANTS;
+  OWNERS:               typeof OWNERS;
+  CONTRACTS:            typeof CONTRACTS;
+  VENDORS:              typeof VENDORS;
+  INVOICES:             typeof INVOICES;
+  // Mutations
+  updateMaintenanceStatus: (id: string, status: string) => Promise<void>;
+  createMaintenanceRequest: (data: {
+    property: string; unit: string; date: string; type: string;
+    technician?: string; description?: string; priority?: string;
+  }) => Promise<void>;
+  recordPayment: (tenantId: string) => Promise<void>;
+  addProperty: (data: Property) => Promise<void>;
+  renewContract: (id: string, newEnd: string) => Promise<void>;
+}
+
+const AppDataContext = createContext<AppData>({
+  PROPERTIES,
+  MAINTENANCE_REQUESTS,
+  UNITS,
+  TENANTS,
+  OWNERS,
+  CONTRACTS,
+  VENDORS,
+  INVOICES,
+  updateMaintenanceStatus: async () => {},
+  createMaintenanceRequest: async () => {},
+  recordPayment: async () => {},
+  addProperty: async () => {},
+  renewContract: async () => {},
+});
+
+const useAppData = () => useContext(AppDataContext);
+
 // --- Shared Components ---
 
 const Icon = ({ name, className = "", filled = false }: { name: string, className?: string, filled?: boolean }) => (
@@ -402,6 +450,7 @@ const WelcomeScreen = ({ onSelect }: { onSelect: (view: View) => void }) => {
 };
 
 const ManagerDashboard = ({ onSelect, onSelectProperty }: { onSelect: (v: View) => void, onSelectProperty: (v: View, p: any) => void }) => {
+  const { PROPERTIES, MAINTENANCE_REQUESTS, TENANTS, CONTRACTS } = useAppData();
   const chartData = [
     { name: 'يناير', value: 4000 },
     { name: 'فبراير', value: 3000 },
@@ -757,6 +806,7 @@ const ManagerDashboard = ({ onSelect, onSelectProperty }: { onSelect: (v: View) 
 };
 
 const AccountingScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const { INVOICES, TENANTS } = useAppData();
   const pieData = [
     { name: 'إيجارات', value: 70, color: '#C5A059' },
     { name: 'رسوم خدمات', value: 20, color: '#121212' },
@@ -905,6 +955,7 @@ const AccountingScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
 };
 
 const InvoicesScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const { INVOICES } = useAppData();
   const [activeFilter, setActiveFilter] = useState('الكل');
   const filters = ['الكل', 'مدفوعة', 'غير مدفوعة', 'متأخرة'];
 
@@ -1043,6 +1094,7 @@ const InvoicesScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
 };
 
 const MaintenanceScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const { MAINTENANCE_REQUESTS } = useAppData();
   const [activeTab, setActiveTab] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const tabs = ['جديد', 'قيد التنفيذ', 'مكتمل'];
@@ -1375,6 +1427,7 @@ const SupportScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
 };
 
 const TenantSatisfactionReportScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const { TENANTS } = useAppData();
   const satisfactionData = [
     { name: 'النظافة', value: 4.8 },
     { name: 'الصيانة', value: 4.2 },
@@ -1477,6 +1530,7 @@ const TenantSatisfactionReportScreen = ({ onSelect }: { onSelect: (v: View) => v
 };
 
 const PropertyDetailsScreen = ({ onSelect, property }: { onSelect: (v: View) => void, property: any }) => {
+  const { TENANTS, MAINTENANCE_REQUESTS, UNITS } = useAppData();
   return (
     <div className="min-h-screen bg-[#f8f7f6] pb-24">
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-primary/10 px-4 pt-12 pb-4 flex items-center justify-between">
@@ -1617,6 +1671,7 @@ const PropertyDetailsScreen = ({ onSelect, property }: { onSelect: (v: View) => 
 };
 
 const NewMaintenanceRequestScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const { PROPERTIES, UNITS, createMaintenanceRequest } = useAppData();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -1739,6 +1794,7 @@ const NewMaintenanceRequestScreen = ({ onSelect }: { onSelect: (v: View) => void
 };
 
 const TenantDashboard = ({ onSelect, onNavigateForms }: { onSelect: (v: View) => void; onNavigateForms?: (cat: string) => void }) => {
+  const { TENANTS, CONTRACTS } = useAppData();
   return (
     <div className="min-h-screen bg-[#f8f8f5] pb-24">
       <header className="bg-white border-b border-slate-200 p-4 sticky top-0 z-50">
@@ -2057,6 +2113,7 @@ const SettingsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
 };
 
 const ReportsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const { TENANTS, CONTRACTS, MAINTENANCE_REQUESTS } = useAppData();
   return (
     <div className="min-h-screen bg-[#f8f8f5] pb-24">
       <header className="flex items-center justify-between p-4 bg-white sticky top-0 z-10 shadow-sm border-b border-primary/10">
@@ -2341,6 +2398,8 @@ const AddPropertyScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
 };
 
 const OwnersManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  // Data from SQLite (via context)
+  const { OWNERS } = useAppData();
   const [quickSendOwner, setQuickSendOwner] = useState<typeof OWNERS[0] | null>(null);
   const [ownerSendDone, setOwnerSendDone] = useState(false);
   return (
@@ -2489,6 +2548,7 @@ const OwnersManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) =
 };
 
 const UnitsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const { UNITS } = useAppData();
   const [activeFilter, setActiveFilter] = useState('الكل');
   const filters = ['الكل', 'شاغرة', 'مؤجرة', 'تحت الصيانة'];
 
@@ -2555,6 +2615,7 @@ const UnitsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) =>
 };
 
 const ContractsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const { CONTRACTS, renewContract } = useAppData();
   const [activeFilter, setActiveFilter] = useState('الكل');
   const [quickSendContract, setQuickSendContract] = useState<typeof CONTRACTS[0] | null>(null);
   const [quickSendDone, setQuickSendDone] = useState(false);
@@ -2804,6 +2865,7 @@ const TechnicalDocsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
 };
 
 const NotificationsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const { CONTRACTS } = useAppData();
   const [filter, setFilter] = useState('الكل');
 
   // Generate smart notifications from data
@@ -3037,6 +3099,7 @@ const ReportLayout = ({ children, title, onBack }: { children: React.ReactNode, 
 };
 
 const FinancialReportScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const { TENANTS, INVOICES } = useAppData();
   return (
     <ReportLayout title="التقرير المالي السنوي" onBack={() => onSelect('reports')}>
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 print:border-none print:shadow-none">
@@ -3159,6 +3222,7 @@ const EjarIntegrationScreen = ({ onSelect }: { onSelect: (v: View) => void }) =>
 };
 
 const TechPerformanceScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const { MAINTENANCE_REQUESTS } = useAppData();
   const completedRequests = MAINTENANCE_REQUESTS.filter(r => r.status === 'completed');
   const activeRequests = MAINTENANCE_REQUESTS.filter(r => r.status !== 'completed');
 
@@ -3305,6 +3369,7 @@ const PROPERTY_CONTEXT = (() => {
 })();
 
 const AIAssistantScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const { PROPERTIES, TENANTS, CONTRACTS, MAINTENANCE_REQUESTS } = useAppData();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '0',
@@ -4010,6 +4075,8 @@ const ArchiveScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
 };
 
 const TenantsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  // Data from SQLite (via context)
+  const { TENANTS } = useAppData();
   const [searchQuery, setSearchQuery] = useState('');
   const [quickSendTenant, setQuickSendTenant] = useState<typeof TENANTS[0] | null>(null);
   const [tenantSendDone, setTenantSendDone] = useState(false);
@@ -4197,6 +4264,7 @@ const TenantsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) 
 };
 
 const VendorsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const { VENDORS } = useAppData();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('الكل');
   const serviceTypes = ['الكل', ...Array.from(new Set(VENDORS.map(v => v.type)))];
@@ -4538,6 +4606,7 @@ const OfficialPrintScreen = ({ onSelect, property }: { onSelect: (v: View) => vo
 };
 
 const PropertyReportScreen = ({ onSelect, property }: { onSelect: (v: View) => void, property: any }) => {
+  const { TENANTS, MAINTENANCE_REQUESTS, CONTRACTS } = useAppData();
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
 
   return (
@@ -4888,6 +4957,7 @@ const PropertyReportScreen = ({ onSelect, property }: { onSelect: (v: View) => v
 // --- Owner Dashboard ---
 
 const OwnerDashboard = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const { PROPERTIES, TENANTS, CONTRACTS, MAINTENANCE_REQUESTS, OWNERS } = useAppData();
   const owner = OWNERS[0]; // Logged-in owner (mock)
   // Owner's properties: first 3 from PROPERTIES
   const ownerProperties = PROPERTIES.slice(0, 3);
@@ -5168,9 +5238,12 @@ const OwnerDashboard = ({ onSelect }: { onSelect: (v: View) => void }) => {
 // --- Technician Portal ---
 
 const TechPortal = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const { MAINTENANCE_REQUESTS, updateMaintenanceStatus } = useAppData();
   const techName = 'أحمد محمود';
   const [activeTab, setActiveTab] = useState<'new' | 'in_progress' | 'completed'>('new');
   const [tasks, setTasks] = useState(MAINTENANCE_REQUESTS);
+  // Sync tasks when context data loads from DB
+  useEffect(() => { setTasks(MAINTENANCE_REQUESTS); }, [MAINTENANCE_REQUESTS]);
 
   const myTasks = tasks.filter(t => t.technician === techName);
   const tabCounts = {
@@ -5192,11 +5265,9 @@ const TechPortal = ({ onSelect }: { onSelect: (v: View) => void }) => {
   };
 
   const advanceStatus = (id: string) => {
-    setTasks(prev => prev.map(t => {
-      if (t.id !== id) return t;
-      const next = t.status === 'new' ? 'in_progress' : t.status === 'in_progress' ? 'completed' : 'completed';
-      return { ...t, status: next };
-    }));
+    const next = tasks.find(t => t.id === id)?.status === 'new' ? 'in_progress' : 'completed';
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, status: next } : t));
+    updateMaintenanceStatus(id, next); // persist to SQLite
   };
 
   const tabs: { key: 'new' | 'in_progress' | 'completed'; label: string }[] = [
@@ -5356,6 +5427,7 @@ const TechPortal = ({ onSelect }: { onSelect: (v: View) => void }) => {
 // --- Payment Screen ---
 
 const PaymentScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const { TENANTS, recordPayment } = useAppData();
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
@@ -5492,7 +5564,7 @@ const PaymentScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
               whileHover={{ y: -2 }}
               whileTap={{ scale: 0.97 }}
               disabled={!selectedMethod}
-              onClick={() => selectedMethod && setSubmitted(true)}
+              onClick={() => { if (!selectedMethod) return; setSubmitted(true); recordPayment('1'); /* tenant id=1 is mock logged-in tenant */ }}
               className={cn(
                 "w-full py-4 rounded-2xl font-black text-base transition-all shadow-lg",
                 selectedMethod
@@ -6062,6 +6134,115 @@ const PropertyFormsScreen = ({ onSelect, initialCategory = 'الكل' }: { onSel
 
 // --- Main App ---
 
+// --- App Data Provider ---
+
+function AppDataProvider({ children }: { children: React.ReactNode }) {
+  const [properties,           setProperties]          = useState<typeof PROPERTIES>(PROPERTIES);
+  const [maintenanceRequests,  setMaintenanceRequests] = useState<typeof MAINTENANCE_REQUESTS>(MAINTENANCE_REQUESTS);
+  const [units,                setUnits]               = useState<typeof UNITS>(UNITS);
+  const [tenants,              setTenants]             = useState<typeof TENANTS>(TENANTS);
+  const [owners,               setOwners]              = useState<typeof OWNERS>(OWNERS);
+  const [contracts,            setContracts]           = useState<typeof CONTRACTS>(CONTRACTS);
+  const [vendors,              setVendors]             = useState<typeof VENDORS>(VENDORS);
+  const [invoices,             setInvoices]            = useState<typeof INVOICES>(INVOICES);
+
+  // Load all data from the SQLite API on mount (fallback to static seed if API unavailable)
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [props, maint, u, t, o, c, v, inv] = await Promise.all([
+          apiGetProperties(),
+          apiGetMaintenance(),
+          apiGetUnits(),
+          apiGetTenants(),
+          apiGetOwners(),
+          apiGetContracts(),
+          apiGetVendors(),
+          apiGetInvoices(),
+        ]);
+        if (props.length)  setProperties(props as typeof PROPERTIES);
+        if (maint.length)  setMaintenanceRequests(maint as typeof MAINTENANCE_REQUESTS);
+        if (u.length)      setUnits(u as typeof UNITS);
+        if (t.length)      setTenants(t as typeof TENANTS);
+        if (o.length)      setOwners(o as typeof OWNERS);
+        if (c.length)      setContracts(c as typeof CONTRACTS);
+        if (v.length)      setVendors(v as typeof VENDORS);
+        if (inv.length)    setInvoices(inv as typeof INVOICES);
+      } catch {
+        // API not available — static seed data is already in state, no action needed
+      }
+    };
+    load();
+  }, []);
+
+  // Mutations — call API then update local state optimistically
+  const updateMaintenanceStatus = async (id: string, status: string) => {
+    setMaintenanceRequests(prev =>
+      prev.map(r => r.id === id ? { ...r, status } : r)
+    );
+    try { await apiUpdateMaintenanceStatus(id, status); } catch {}
+  };
+
+  const createMaintenanceRequest = async (data: {
+    property: string; unit: string; date: string; type: string;
+    technician?: string; description?: string; priority?: string;
+  }) => {
+    const tempId = String(Date.now());
+    const newReq = {
+      id: tempId, status: 'new',
+      property: data.property, unit: data.unit, date: data.date, type: data.type,
+      technician: data.technician ?? '', description: data.description ?? '',
+      priority: data.priority ?? 'medium',
+    };
+    setMaintenanceRequests(prev => [newReq as typeof MAINTENANCE_REQUESTS[0], ...prev]);
+    try {
+      const created = await apiCreateMaintenance(data);
+      setMaintenanceRequests(prev => prev.map(r => r.id === tempId ? created as typeof r : r));
+    } catch {}
+  };
+
+  const recordPayment = async (tenantId: string) => {
+    setTenants(prev => prev.map(t => t.id === tenantId ? { ...t, paid: true } : t));
+    setInvoices(prev => prev.map(inv =>
+      inv.tenant === (tenants.find(t => t.id === tenantId)?.name ?? '')
+        ? { ...inv, status: 'مدفوعة' } : inv
+    ));
+    try { await apiRecordPayment(tenantId); } catch {}
+  };
+
+  const addProperty = async (data: Property) => {
+    setProperties(prev => [...prev, data as typeof PROPERTIES[0]]);
+    try { await apiAddProperty(data); } catch {}
+  };
+
+  const renewContract = async (id: string, newEnd: string) => {
+    setContracts(prev =>
+      prev.map(c => c.id === id ? { ...c, end: newEnd, status: 'ساري' } : c)
+    );
+    try { await apiUpdateContract(id, { status: 'ساري', end: newEnd }); } catch {}
+  };
+
+  return (
+    <AppDataContext.Provider value={{
+      PROPERTIES: properties,
+      MAINTENANCE_REQUESTS: maintenanceRequests,
+      UNITS: units,
+      TENANTS: tenants,
+      OWNERS: owners,
+      CONTRACTS: contracts,
+      VENDORS: vendors,
+      INVOICES: invoices,
+      updateMaintenanceStatus,
+      createMaintenanceRequest,
+      recordPayment,
+      addProperty,
+      renewContract,
+    }}>
+      {children}
+    </AppDataContext.Provider>
+  );
+}
+
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('welcome');
   const [selectedProperty, setSelectedProperty] = useState(PROPERTIES[0]);
@@ -6125,18 +6306,20 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen font-sans">
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentView}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.2 }}
-        >
-          {renderView()}
-        </motion.div>
-      </AnimatePresence>
-    </div>
+    <AppDataProvider>
+      <div className="min-h-screen font-sans">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentView}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.2 }}
+          >
+            {renderView()}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </AppDataProvider>
   );
 }
