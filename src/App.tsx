@@ -1672,22 +1672,50 @@ const PropertyDetailsScreen = ({ onSelect, property }: { onSelect: (v: View) => 
 
 const NewMaintenanceRequestScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
   const { PROPERTIES, UNITS, createMaintenanceRequest } = useAppData();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
 
-  const handleSubmit = () => {
+  // ── Controlled form state ────────────────────────────────────────────────
+  const [selectedProperty, setSelectedProperty] = useState('');
+  const [unit,             setUnit]             = useState('');
+  const [category,         setCategory]         = useState('سباكة');
+  const [priority,         setPriority]         = useState('متوسط');
+  const [description,      setDescription]      = useState('');
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess,    setIsSuccess]    = useState(false);
+  const [error,        setError]        = useState('');
+
+  const priorityMap: Record<string, string> = { 'منخفض': 'low', 'متوسط': 'medium', 'عالي': 'high' };
+
+  // ── Submit ────────────────────────────────────────────────────────────────
+  const handleSubmit = async () => {
+    if (!selectedProperty) { setError('يرجى اختيار المبنى'); return; }
+    if (!unit.trim())       { setError('يرجى إدخال رقم الوحدة'); return; }
+    if (!description.trim()){ setError('يرجى إدخال وصف المشكلة'); return; }
+    setError('');
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      await createMaintenanceRequest({
+        property:    selectedProperty,
+        unit:        unit.trim(),
+        date:        new Date().toISOString().slice(0, 10),
+        type:        category,
+        description: description.trim(),
+        priority:    priorityMap[priority] ?? 'medium',
+      });
       setIsSuccess(true);
-      setTimeout(() => onSelect('maintenance'), 1500);
-    }, 1000);
+      setTimeout(() => onSelect('maintenance'), 1600);
+    } catch {
+      setError('حدث خطأ أثناء الإرسال، حاول مرة أخرى');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
+  // ── Success screen ────────────────────────────────────────────────────────
   if (isSuccess) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
-        <motion.div 
+        <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           className="w-24 h-24 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-6"
@@ -1700,6 +1728,7 @@ const NewMaintenanceRequestScreen = ({ onSelect }: { onSelect: (v: View) => void
     );
   }
 
+  // ── Form ──────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#f8f7f6] pb-24">
       <header className="flex items-center justify-between p-4 pb-2 sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b border-slate-200">
@@ -1710,36 +1739,61 @@ const NewMaintenanceRequestScreen = ({ onSelect }: { onSelect: (v: View) => void
       </header>
 
       <main className="p-4 space-y-6">
+        {/* Property selector */}
         <div className="space-y-4">
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-semibold">الممتلكات</label>
-            <select className="w-full rounded-xl border-none bg-white py-3.5 pr-4 pl-10 focus:ring-2 focus:ring-primary shadow-sm text-base transition-all">
-              <option disabled selected>اختر المبنى</option>
-              <option>أبراج النخيل - الرياض</option>
-              <option>فيلا السعادة - جدة</option>
+            <label className="text-sm font-semibold">المبنى / العقار</label>
+            <select
+              value={selectedProperty}
+              onChange={e => setSelectedProperty(e.target.value)}
+              className="w-full rounded-xl border-none bg-white py-3.5 pr-4 pl-10 focus:ring-2 focus:ring-primary shadow-sm text-base transition-all"
+            >
+              <option value="" disabled>اختر المبنى</option>
+              {PROPERTIES.map(p => (
+                <option key={p.id} value={p.name}>{p.name} — {p.location}</option>
+              ))}
             </select>
           </div>
+
+          {/* Unit */}
           <div className="flex flex-col gap-1">
             <label className="text-sm font-semibold">رقم الوحدة</label>
-            <input className="w-full rounded-xl border-none bg-white py-3.5 px-4 focus:ring-2 focus:ring-primary shadow-sm transition-all" placeholder="أدخل رقم الشقة أو الوحدة" type="text"/>
+            <select
+              value={unit}
+              onChange={e => setUnit(e.target.value)}
+              className="w-full rounded-xl border-none bg-white py-3.5 pr-4 pl-10 focus:ring-2 focus:ring-primary shadow-sm text-base transition-all"
+            >
+              <option value="" disabled>اختر الوحدة أو أدخل الرقم</option>
+              {UNITS.filter(u => !selectedProperty || u.property === selectedProperty).map(u => (
+                <option key={u.id} value={u.id}>{u.type} {u.id} — {u.property}</option>
+              ))}
+            </select>
+            <input
+              className="mt-1 w-full rounded-xl border-none bg-white py-3 px-4 focus:ring-2 focus:ring-primary shadow-sm transition-all text-sm"
+              placeholder="أو أدخل رقم الوحدة يدوياً..."
+              value={unit}
+              onChange={e => setUnit(e.target.value)}
+            />
           </div>
         </div>
 
+        {/* Category */}
         <div className="space-y-3">
           <h3 className="text-sm font-semibold">فئة المشكلة</h3>
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: 'سباكة', icon: 'plumbing', active: true },
+              { label: 'سباكة',  icon: 'plumbing' },
               { label: 'كهرباء', icon: 'electrical_services' },
-              { label: 'تكييف', icon: 'ac_unit' },
+              { label: 'تكييف',  icon: 'ac_unit' },
               { label: 'مكافحة', icon: 'pest_control' },
-              { label: 'دهان', icon: 'format_paint' },
-              { label: 'أخرى', icon: 'more_horiz' },
+              { label: 'دهان',   icon: 'format_paint' },
+              { label: 'أخرى',   icon: 'more_horiz' },
             ].map((cat, i) => (
-              <motion.button 
-                key={i} 
+              <motion.button
+                key={i}
                 whileTap={{ scale: 0.95 }}
-                className={`flex flex-col items-center justify-center gap-2 rounded-xl p-3 transition-all border-2 ${cat.active ? 'border-primary bg-primary/10 text-primary' : 'border-transparent bg-white text-slate-500'}`}
+                onClick={() => setCategory(cat.label)}
+                className={`flex flex-col items-center justify-center gap-2 rounded-xl p-3 transition-all border-2 ${category === cat.label ? 'border-primary bg-primary/10 text-primary' : 'border-transparent bg-white text-slate-500'}`}
               >
                 <Icon name={cat.icon} className="text-2xl" />
                 <span className="text-xs font-medium">{cat.label}</span>
@@ -1748,26 +1802,38 @@ const NewMaintenanceRequestScreen = ({ onSelect }: { onSelect: (v: View) => void
           </div>
         </div>
 
+        {/* Priority */}
         <div className="space-y-3">
           <h3 className="text-sm font-semibold">مستوى الأولوية</h3>
           <div className="flex w-full rounded-xl bg-slate-100 p-1">
             {['منخفض', 'متوسط', 'عالي'].map((p, i) => (
-              <button key={i} className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${i === 1 ? 'bg-white text-primary shadow-sm' : 'text-slate-500'}`}>
+              <button
+                key={i}
+                onClick={() => setPriority(p)}
+                className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${priority === p ? 'bg-white text-primary shadow-sm' : 'text-slate-500'}`}
+              >
                 {p}
               </button>
             ))}
           </div>
         </div>
 
+        {/* Description */}
         <div className="space-y-2">
           <label className="text-sm font-semibold">الوصف</label>
-          <textarea className="w-full min-h-[120px] rounded-xl border-none bg-white p-4 focus:ring-2 focus:ring-primary shadow-sm resize-none transition-all" placeholder="اشرح المشكلة بالتفصيل..."></textarea>
+          <textarea
+            className="w-full min-h-[120px] rounded-xl border-none bg-white p-4 focus:ring-2 focus:ring-primary shadow-sm resize-none transition-all"
+            placeholder="اشرح المشكلة بالتفصيل..."
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+          />
         </div>
 
+        {/* Photo placeholder */}
         <div className="space-y-2">
           <label className="text-sm font-semibold">إرفاق صور (اختياري)</label>
           <div className="flex gap-3 overflow-x-auto pb-2">
-            <motion.button 
+            <motion.button
               whileTap={{ scale: 0.95 }}
               className="flex h-24 w-24 shrink-0 flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 text-slate-400"
             >
@@ -1777,22 +1843,35 @@ const NewMaintenanceRequestScreen = ({ onSelect }: { onSelect: (v: View) => void
           </div>
         </div>
 
-        <button 
-          onClick={handleSubmit} 
+        {/* Validation error */}
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm font-bold"
+          >
+            <Icon name="error" className="text-base" />
+            {error}
+          </motion.div>
+        )}
+
+        {/* Submit button */}
+        <button
+          onClick={handleSubmit}
           disabled={isSubmitting}
           className={cn(
             "flex w-full items-center justify-center gap-2 rounded-full py-4 text-white font-bold text-lg shadow-lg transition-all",
-            isSubmitting ? "bg-slate-400" : "bg-primary shadow-primary/20 hover:bg-primary-dark"
+            isSubmitting ? "bg-slate-400 cursor-not-allowed" : "bg-primary shadow-primary/20 hover:bg-primary-dark"
           )}
         >
-          {isSubmitting ? "جاري الإرسال..." : "إرسال الطلب"}
-          {!isSubmitting && <Icon name="send" />}
+          {isSubmitting
+            ? <><span className="animate-spin text-xl">↻</span> جاري الإرسال...</>
+            : <><Icon name="send" /> إرسال الطلب</>}
         </button>
       </main>
     </div>
   );
 };
-
 const TenantDashboard = ({ onSelect, onNavigateForms }: { onSelect: (v: View) => void; onNavigateForms?: (cat: string) => void }) => {
   const { TENANTS, CONTRACTS } = useAppData();
   return (
@@ -2266,28 +2345,33 @@ const ReportsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
 };
 
 const AddPropertyScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const { PROPERTIES, addProperty } = useAppData();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [propertyName, setPropertyName] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-
-    // Check for duplicates
     const exists = PROPERTIES.some(p => p.name === propertyName);
-    if (exists) {
-      setError('هذا العقار موجود بالفعل في النظام (تكرار)');
-      return;
-    }
-
+    if (exists) { setError('هذا العقار موجود بالفعل في النظام (تكرار)'); return; }
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      await addProperty({
+        id: String(Date.now()),
+        name: propertyName,
+        location: '',
+        units: 0,
+        type: 'سكني',
+      });
       setIsSuccess(true);
       setTimeout(() => onSelect('manager_dashboard'), 1500);
-    }, 1000);
+    } catch {
+      setError('حدث خطأ أثناء الحفظ، حاول مرة أخرى');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isSuccess) {
