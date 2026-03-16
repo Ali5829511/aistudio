@@ -15,13 +15,15 @@ import {
   type Property, type MaintenanceRequest, type Unit, type Tenant,
   type Owner, type Contract, type Vendor, type Invoice, type AdminUser,
 } from './api.ts';
+import { useLang, LanguageProvider, LanguageToggle } from './LanguageContext';
 
 // --- Utility ---
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const toArabicDigits = (num: number | string) => {
+const toArabicDigits = (num: number | string, lang: string = 'ar') => {
+  if (lang !== 'ar') return num.toString();
   const id = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
   return num.toString().replace(/[0-9]/g, (w) => id[+w]);
 };
@@ -301,12 +303,13 @@ type NavItem = {
 };
 
 const BottomNav = ({ active, onSelect }: { active: View, onSelect: (v: View) => void }) => {
+  const { t } = useLang();
   const items: NavItem[] = [
-    { id: 'manager_dashboard', label: 'الرئيسية', icon: 'grid_view' },
-    { id: 'property_details', label: 'العقارات', icon: 'apartment' },
-    { id: 'ai_assistant', label: 'مساعد ذكي', icon: 'auto_awesome', highlight: true },
-    { id: 'accounting', label: 'المالية', icon: 'account_balance_wallet' },
-    { id: 'settings', label: 'الإعدادات', icon: 'settings' },
+    { id: 'manager_dashboard', label: t('nav_home'), icon: 'grid_view' },
+    { id: 'property_details', label: t('nav_properties'), icon: 'apartment' },
+    { id: 'ai_assistant', label: t('nav_ai_assistant'), icon: 'auto_awesome', highlight: true },
+    { id: 'accounting', label: t('nav_finance'), icon: 'account_balance_wallet' },
+    { id: 'settings', label: t('nav_settings'), icon: 'settings' },
   ];
 
   return (
@@ -376,6 +379,7 @@ const LoginScreen = ({
   onSuccess: (user: AdminUser) => void;
   onBack: () => void;
 }) => {
+  const { t } = useLang();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -386,7 +390,7 @@ const LoginScreen = ({
     e.preventDefault();
     setError('');
     if (!email.trim() || !password.trim()) {
-      setError('يرجى إدخال البريد الإلكتروني وكلمة المرور');
+      setError(t('error_fill_fields'));
       return;
     }
     setLoading(true);
@@ -394,7 +398,7 @@ const LoginScreen = ({
       const user = await apiLogin(email.trim(), password);
       onSuccess(user);
     } catch {
-      setError('البريد الإلكتروني أو كلمة المرور غير صحيحة');
+      setError(t('error_invalid_credentials'));
     } finally {
       setLoading(false);
     }
@@ -412,19 +416,19 @@ const LoginScreen = ({
           <div className="inline-flex items-center justify-center size-16 bg-primary rounded-2xl shadow-xl shadow-primary/30 mb-4">
             <Icon name="corporate_fare" className="text-3xl text-white" />
           </div>
-          <h1 className="text-2xl font-black text-white">سمات</h1>
-          <p className="text-slate-400 text-sm mt-1">بوابة مديري العقارات</p>
+          <h1 className="text-2xl font-black text-white">{t('login_title')}</h1>
+          <p className="text-slate-400 text-sm mt-1">{t('property_managers_portal')}</p>
         </div>
 
         {/* Card */}
         <div className="bg-white rounded-3xl shadow-2xl p-7">
-          <h2 className="text-lg font-black text-brand-dark mb-1">تسجيل الدخول</h2>
-          <p className="text-xs text-slate-400 mb-6">أدخل بياناتك للوصول إلى لوحة التحكم</p>
+          <h2 className="text-lg font-black text-brand-dark mb-1">{t('sign_in')}</h2>
+          <p className="text-xs text-slate-400 mb-6">{t('enter_credentials')}</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email */}
             <div>
-              <label className="text-xs font-bold text-slate-500 mb-1 block">البريد الإلكتروني</label>
+              <label className="text-xs font-bold text-slate-500 mb-1 block">{t('email')}</label>
               <div className="relative">
                 <Icon name="email" className="absolute right-3 top-3 text-slate-400 text-lg" />
                 <input
@@ -441,7 +445,7 @@ const LoginScreen = ({
 
             {/* Password */}
             <div>
-              <label className="text-xs font-bold text-slate-500 mb-1 block">كلمة المرور</label>
+              <label className="text-xs font-bold text-slate-500 mb-1 block">{t('password')}</label>
               <div className="relative">
                 <Icon name="lock" className="absolute right-3 top-3 text-slate-400 text-lg" />
                 <input
@@ -485,12 +489,12 @@ const LoginScreen = ({
               {loading ? (
                 <>
                   <Icon name="autorenew" className="text-base animate-spin" />
-                  جاري التحقق...
+                  {t('verifying')}
                 </>
               ) : (
                 <>
                   <Icon name="login" className="text-base" />
-                  دخول
+                  {t('login')}
                 </>
               )}
             </button>
@@ -503,7 +507,7 @@ const LoginScreen = ({
           className="mt-6 w-full text-slate-400 text-xs flex items-center justify-center gap-1 hover:text-white transition-colors"
         >
           <Icon name="arrow_forward" className="text-sm" />
-          العودة للصفحة الرئيسية
+          {t('back_to_home')}
         </button>
       </motion.div>
     </div>
@@ -511,11 +515,12 @@ const LoginScreen = ({
 };
 
 const WelcomeScreen = ({ onSelect }: { onSelect: (view: View) => void }) => {
+  const { t } = useLang();
   const accountTypes = [
-    { id: 'login', title: 'مكتب العقارات / مديرو العقارات', icon: 'corporate_fare', desc: 'إدارة متكاملة للمحافظ العقارية' },
-    { id: 'owner_dashboard', title: 'المالك / أصحاب العقارات', icon: 'real_estate_agent', desc: 'متابعة الأداء المالي لعقاراتك' },
-    { id: 'tenant_dashboard', title: 'المستأجر / سكان الوحدات', icon: 'person_pin_circle', desc: 'خدمات المستأجرين والدفع الإلكتروني' },
-    { id: 'tech_portal', title: 'بوابة الفنيين', icon: 'construction', desc: 'إدارة طلبات الصيانة والمهام' },
+    { id: 'login', title: t('office_managers'), icon: 'corporate_fare', desc: t('office_managers_desc') },
+    { id: 'owner_dashboard', title: t('owner_managers'), icon: 'real_estate_agent', desc: t('owner_managers_desc') },
+    { id: 'tenant_dashboard', title: t('tenant_residents'), icon: 'person_pin_circle', desc: t('tenant_residents_desc') },
+    { id: 'tech_portal', title: t('tech_portal'), icon: 'construction', desc: t('tech_portal_desc') },
   ];
 
   return (
@@ -540,7 +545,7 @@ const WelcomeScreen = ({ onSelect }: { onSelect: (view: View) => void }) => {
           رمز <span className="text-primary">الإبداع</span>
         </h1>
         <p className="text-slate-400 text-center max-w-xl font-medium text-xl tracking-wide">
-          الريادة في إدارة الأملاك العقارية
+          {t('welcome_subtitle')}
         </p>
         <div className="w-24 h-1 gold-gradient rounded-full mt-6"></div>
       </motion.header>
@@ -568,7 +573,7 @@ const WelcomeScreen = ({ onSelect }: { onSelect: (view: View) => void }) => {
               <p className="text-slate-500 text-sm font-medium leading-relaxed">{type.desc}</p>
               
               <div className="mt-6 flex items-center gap-2 text-primary opacity-0 group-hover:opacity-100 transition-all transform translate-x-4 group-hover:translate-x-0">
-                <span className="text-xs font-bold uppercase tracking-widest">دخول المنصة</span>
+                <span className="text-xs font-bold uppercase tracking-widest">{t('enter_platform')}</span>
                 <Icon name="arrow_back" className="text-sm" />
               </div>
             </motion.button>
@@ -594,6 +599,7 @@ const WelcomeScreen = ({ onSelect }: { onSelect: (view: View) => void }) => {
 };
 
 const ManagerDashboard = ({ onSelect, onSelectProperty }: { onSelect: (v: View) => void, onSelectProperty: (v: View, p: any) => void }) => {
+  const { t, lang } = useLang();
   const { PROPERTIES, MAINTENANCE_REQUESTS, TENANTS, CONTRACTS } = useAppData();
   const chartData = [
     { name: 'يناير', value: 4000 },
@@ -621,6 +627,7 @@ const ManagerDashboard = ({ onSelect, onSelectProperty }: { onSelect: (v: View) 
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <LanguageToggle />
           <button onClick={() => onSelect('ai_assistant')} className="relative p-2.5 rounded-xl bg-primary/20 text-primary hover:bg-primary/30 transition-all" title="المساعد الذكي">
             <Icon name="auto_awesome" className="text-xl" />
           </button>
@@ -643,12 +650,12 @@ const ManagerDashboard = ({ onSelect, onSelectProperty }: { onSelect: (v: View) 
           className="flex items-end justify-between"
         >
           <div>
-            <h2 className="text-3xl font-black text-brand-dark tracking-tight">لوحة التحكم</h2>
-            <p className="text-sm text-slate-400 font-medium mt-1">نظرة عامة على أداء محفظتك العقارية</p>
+            <h2 className="text-3xl font-black text-brand-dark tracking-tight">{t('dashboard_title')}</h2>
+            <p className="text-sm text-slate-400 font-medium mt-1">{t('dashboard_subtitle')}</p>
           </div>
           <div className="hidden sm:flex items-center gap-2 bg-slate-100 p-1 rounded-xl">
-             <button className="px-4 py-1.5 bg-white shadow-sm rounded-lg text-xs font-bold">اليوم</button>
-             <button className="px-4 py-1.5 text-slate-500 rounded-lg text-xs font-bold">الأسبوع</button>
+             <button className="px-4 py-1.5 bg-white shadow-sm rounded-lg text-xs font-bold">{t('today')}</button>
+             <button className="px-4 py-1.5 text-slate-500 rounded-lg text-xs font-bold">{t('this_week')}</button>
           </div>
         </motion.section>
 
@@ -662,7 +669,7 @@ const ManagerDashboard = ({ onSelect, onSelectProperty }: { onSelect: (v: View) 
             <div className="absolute top-0 right-0 w-48 h-48 gold-gradient opacity-5 rounded-full -mr-24 -mt-24 blur-3xl group-hover:opacity-10 transition-opacity"></div>
             <div className="flex justify-between items-start relative z-10">
               <div>
-                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-2">إجمالي التحصيل المالي</p>
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-2">{t('total_collection')}</p>
                 <h3 className="text-4xl font-black text-white tracking-tighter">١٤٥,٥٠٠ <span className="text-lg font-bold text-primary">ر.س</span></h3>
               </div>
               <div className="size-14 gold-gradient rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20">
@@ -674,7 +681,7 @@ const ManagerDashboard = ({ onSelect, onSelectProperty }: { onSelect: (v: View) 
                 <Icon name="trending_up" className="text-[12px]" />
                 <span>+١٢.٥٪</span>
               </div>
-              <p className="text-[10px] text-slate-500 font-bold">مقارنة بالشهر الماضي</p>
+              <p className="text-[10px] text-slate-500 font-bold">{t('compare_last_month')}</p>
             </div>
           </motion.div>
           
@@ -688,8 +695,8 @@ const ManagerDashboard = ({ onSelect, onSelectProperty }: { onSelect: (v: View) 
               <Icon name="apartment" className="text-2xl" filled />
             </div>
             <div>
-              <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">إجمالي العقارات</p>
-              <h3 className="text-3xl font-black text-brand-dark tracking-tighter">{toArabicDigits(PROPERTIES.length)}</h3>
+              <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">{t('total_properties')}</p>
+              <h3 className="text-3xl font-black text-brand-dark tracking-tighter">{toArabicDigits(PROPERTIES.length, lang)}</h3>
             </div>
           </motion.div>
           
@@ -703,7 +710,7 @@ const ManagerDashboard = ({ onSelect, onSelectProperty }: { onSelect: (v: View) 
               <Icon name="people" className="text-2xl" filled />
             </div>
             <div>
-              <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">المستأجرين</p>
+              <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">{t('tenants')}</p>
               <h3 className="text-3xl font-black text-brand-dark tracking-tighter">٨٩</h3>
             </div>
           </motion.div>
@@ -713,13 +720,13 @@ const ManagerDashboard = ({ onSelect, onSelectProperty }: { onSelect: (v: View) 
            <div className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
               <div className="flex items-center justify-between mb-8">
                 <div>
-                  <h3 className="text-lg font-black text-brand-dark">تحليل الإيرادات</h3>
-                  <p className="text-xs text-slate-400 font-medium">معدل النمو الشهري للتحصيل</p>
+                  <h3 className="text-lg font-black text-brand-dark">{t('revenue_analysis')}</h3>
+                  <p className="text-xs text-slate-400 font-medium">{t('monthly_growth')}</p>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
                     <div className="size-2 rounded-full bg-primary"></div>
-                    <span className="text-[10px] font-bold text-slate-500">الإيرادات</span>
+                    <span className="text-[10px] font-bold text-slate-500">{t('revenues')}</span>
                   </div>
                 </div>
               </div>
@@ -759,7 +766,7 @@ const ManagerDashboard = ({ onSelect, onSelectProperty }: { onSelect: (v: View) 
            </div>
 
            <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col">
-              <h3 className="text-lg font-black text-brand-dark mb-6">توزيع الإشغال</h3>
+               <h3 className="text-lg font-black text-brand-dark mb-6">{t('occupancy_distribution')}</h3>
               <div className="flex-grow flex items-center justify-center relative">
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                   <span className="text-3xl font-black text-brand-dark">٩٢٪</span>
@@ -769,8 +776,8 @@ const ManagerDashboard = ({ onSelect, onSelectProperty }: { onSelect: (v: View) 
                   <PieChart>
                     <Pie
                       data={[
-                        { name: 'مشغول', value: 92 },
-                        { name: 'شاغر', value: 8 }
+                        { name: t('occupied'), value: 92 },
+                        { name: t('vacant_unit'), value: 8 }
                       ]}
                       innerRadius={65}
                       outerRadius={85}
@@ -789,14 +796,14 @@ const ManagerDashboard = ({ onSelect, onSelectProperty }: { onSelect: (v: View) 
                 <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl">
                   <div className="flex items-center gap-3">
                     <div className="size-2 rounded-full bg-primary"></div>
-                    <span className="text-xs font-bold text-slate-600">وحدات مؤجرة</span>
+                    <span className="text-xs font-bold text-slate-600">{t('rented_units')}</span>
                   </div>
                   <span className="text-xs font-black text-brand-dark">١٤٢</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl">
                   <div className="flex items-center gap-3">
                     <div className="size-2 rounded-full bg-slate-300"></div>
-                    <span className="text-xs font-bold text-slate-600">وحدات شاغرة</span>
+                    <span className="text-xs font-bold text-slate-600">{t('vacant_units')}</span>
                   </div>
                   <span className="text-xs font-black text-brand-dark">١٢</span>
                 </div>
@@ -806,15 +813,15 @@ const ManagerDashboard = ({ onSelect, onSelectProperty }: { onSelect: (v: View) 
 
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-xl font-black text-brand-dark">إجراءات سريعة</h3>
+            <h3 className="text-xl font-black text-brand-dark">{t('quick_actions')}</h3>
             <div className="h-px flex-grow mx-6 bg-slate-100"></div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { label: 'إضافة عقار', icon: 'add_home', color: 'gold-gradient text-brand-dark', view: 'add_property' },
-              { label: 'إدارة العقود', icon: 'history_edu', color: 'bg-brand-dark text-white', view: 'contracts' },
-              { label: 'فاتورة جديدة', icon: 'receipt_long', color: 'bg-white border-slate-100 text-slate-600', view: 'invoices' },
-              { label: 'طلب صيانة', icon: 'build', color: 'bg-white border-slate-100 text-slate-600', view: 'new_maintenance' },
+              { label: t('add_property'), icon: 'add_home', color: 'gold-gradient text-brand-dark', view: 'add_property' },
+              { label: t('manage_contracts'), icon: 'history_edu', color: 'bg-brand-dark text-white', view: 'contracts' },
+              { label: t('new_invoice'), icon: 'receipt_long', color: 'bg-white border-slate-100 text-slate-600', view: 'invoices' },
+              { label: t('maintenance_request'), icon: 'build', color: 'bg-white border-slate-100 text-slate-600', view: 'new_maintenance' },
             ].map((action, i) => (
               <motion.button 
                 key={i} 
@@ -834,8 +841,8 @@ const ManagerDashboard = ({ onSelect, onSelectProperty }: { onSelect: (v: View) 
 
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-xl font-black text-brand-dark">أحدث العقارات</h3>
-            <button onClick={() => onSelect('property_details')} className="text-primary text-xs font-black uppercase tracking-widest">عرض الكل</button>
+            <h3 className="text-xl font-black text-brand-dark">{t('latest_properties')}</h3>
+            <button onClick={() => onSelect('property_details')} className="text-primary text-xs font-black uppercase tracking-widest">{t('view_all')}</button>
           </div>
           <div className="flex gap-4 overflow-x-auto pb-6 no-scrollbar -mx-5 px-5">
             {PROPERTIES.slice(0, 6).map((prop, i) => (
@@ -895,7 +902,7 @@ const ManagerDashboard = ({ onSelect, onSelectProperty }: { onSelect: (v: View) 
                        <div className="size-8 bg-slate-50 rounded-lg flex items-center justify-center text-slate-400">
                           <Icon name="door_front" className="text-lg" />
                        </div>
-                       <span className="text-xs font-black text-slate-600">{toArabicDigits(prop.units)} وحدة</span>
+                       <span className="text-xs font-black text-slate-600">{toArabicDigits(prop.units, lang)} {t('unit_count')}</span>
                     </div>
                     <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-brand-dark transition-all">
                        <Icon name="arrow_back" className="text-lg" />
@@ -909,20 +916,20 @@ const ManagerDashboard = ({ onSelect, onSelectProperty }: { onSelect: (v: View) 
 
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-xl font-black text-brand-dark">إدارة العمليات</h3>
+            <h3 className="text-xl font-black text-brand-dark">{t('operations_management')}</h3>
             <div className="h-px flex-grow mx-6 bg-slate-100"></div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {[
-              { label: 'المستأجرون', icon: 'group', bg: 'bg-blue-50', color: 'text-blue-600', badge: toArabicDigits(TENANTS.length), view: 'tenants_management' },
-              { label: 'الملاك', icon: 'real_estate_agent', bg: 'bg-emerald-50', color: 'text-emerald-600', badge: toArabicDigits(OWNERS.length), view: 'owners' },
-              { label: 'العقود', icon: 'history_edu', bg: 'bg-amber-50', color: 'text-amber-600', badge: toArabicDigits(CONTRACTS.length), view: 'contracts' },
-              { label: 'الوحدات', icon: 'door_front', bg: 'bg-violet-50', color: 'text-violet-600', badge: toArabicDigits(UNITS.length), view: 'units' },
-              { label: 'الموردون', icon: 'engineering', bg: 'bg-orange-50', color: 'text-orange-600', badge: toArabicDigits(VENDORS.length), view: 'vendors_management' },
-              { label: 'الأصول', icon: 'inventory', bg: 'bg-rose-50', color: 'text-rose-600', badge: '٤', view: 'asset_management' },
-              { label: 'التقارير', icon: 'bar_chart', bg: 'bg-sky-50', color: 'text-sky-600', badge: toArabicDigits(10), view: 'reports' },
-              { label: 'قوالب الرسائل', icon: 'mark_email_unread', bg: 'bg-indigo-50', color: 'text-indigo-600', badge: toArabicDigits(MSG_TEMPLATES.length), view: 'msg_templates' },
-              { label: 'نماذج العقارات', icon: 'description', bg: 'bg-pink-50', color: 'text-pink-600', badge: toArabicDigits(PROPERTY_FORMS.length), view: 'property_forms' },
+              { label: t('tenants_label'), icon: 'group', bg: 'bg-blue-50', color: 'text-blue-600', badge: toArabicDigits(TENANTS.length, lang), view: 'tenants_management' },
+              { label: t('owners_label'), icon: 'real_estate_agent', bg: 'bg-emerald-50', color: 'text-emerald-600', badge: toArabicDigits(OWNERS.length, lang), view: 'owners' },
+              { label: t('contracts_label'), icon: 'history_edu', bg: 'bg-amber-50', color: 'text-amber-600', badge: toArabicDigits(CONTRACTS.length, lang), view: 'contracts' },
+              { label: t('units_label'), icon: 'door_front', bg: 'bg-violet-50', color: 'text-violet-600', badge: toArabicDigits(UNITS.length, lang), view: 'units' },
+              { label: t('vendors_label'), icon: 'engineering', bg: 'bg-orange-50', color: 'text-orange-600', badge: toArabicDigits(VENDORS.length, lang), view: 'vendors_management' },
+              { label: t('assets_label'), icon: 'inventory', bg: 'bg-rose-50', color: 'text-rose-600', badge: '٤', view: 'asset_management' },
+              { label: t('reports_label'), icon: 'bar_chart', bg: 'bg-sky-50', color: 'text-sky-600', badge: toArabicDigits(10, lang), view: 'reports' },
+              { label: t('msg_templates_label'), icon: 'mark_email_unread', bg: 'bg-indigo-50', color: 'text-indigo-600', badge: toArabicDigits(MSG_TEMPLATES.length, lang), view: 'msg_templates' },
+              { label: t('property_forms_label'), icon: 'description', bg: 'bg-pink-50', color: 'text-pink-600', badge: toArabicDigits(PROPERTY_FORMS.length, lang), view: 'property_forms' },
             ].map((item, i) => (
               <motion.button
                 key={i}
@@ -1238,10 +1245,11 @@ const InvoicesScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
 };
 
 const MaintenanceScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const { t } = useLang();
   const { MAINTENANCE_REQUESTS } = useAppData();
   const [activeTab, setActiveTab] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const tabs = ['جديد', 'قيد التنفيذ', 'مكتمل'];
+  const tabs = [t('maintenance_new'), t('maintenance_in_progress'), t('maintenance_completed')];
 
   const filteredRequests = MAINTENANCE_REQUESTS.filter(req => {
     const matchesTab = 
@@ -1264,7 +1272,7 @@ const MaintenanceScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
           <button onClick={() => onSelect('manager_dashboard')} className="flex items-center justify-center size-10 rounded-xl bg-white/5 text-white hover:bg-white/10 transition-all">
             <Icon name="arrow_forward" />
           </button>
-          <h1 className="text-lg font-black text-white">الصيانة</h1>
+          <h1 className="text-lg font-black text-white">{t('maintenance_title')}</h1>
         </div>
         <button onClick={() => onSelect('new_maintenance')} className="flex items-center justify-center size-10 rounded-xl gold-gradient text-brand-dark shadow-lg shadow-primary/20">
           <Icon name="add" />
@@ -1293,7 +1301,7 @@ const MaintenanceScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
           <Icon name="search" className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" />
           <input 
             type="text" 
-            placeholder="البحث عن عقار، وحدة، أو نوع المشكلة..." 
+            placeholder={t('search_maintenance')} 
             className="w-full bg-white border border-slate-100 rounded-[1.5rem] py-4 pr-12 pl-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -1307,7 +1315,7 @@ const MaintenanceScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
               <div className="size-8 bg-rose-100 rounded-lg flex items-center justify-center text-rose-600">
                 <Icon name="warning" className="text-lg" />
               </div>
-              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">عاجل</p>
+              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{t('urgent')}</p>
             </div>
             <p className="text-3xl font-black text-brand-dark relative z-10">{MAINTENANCE_REQUESTS.filter(r => r.priority === 'high' && r.status !== 'completed').length}</p>
           </div>
@@ -1317,9 +1325,9 @@ const MaintenanceScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
               <div className="size-8 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
                 <Icon name="schedule" className="text-lg" />
               </div>
-              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">متوسط الانتظار</p>
+              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{t('avg_wait')}</p>
             </div>
-            <p className="text-3xl font-black text-brand-dark relative z-10">2 يوم</p>
+            <p className="text-3xl font-black text-brand-dark relative z-10">{toArabicDigits(2, lang)} {t('days')}</p>
           </div>
         </div>
 
@@ -1350,7 +1358,7 @@ const MaintenanceScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
                         req.priority === 'medium' ? "bg-amber-100 text-amber-700" : 
                         "bg-blue-100 text-blue-700"
                       )}>
-                        {req.priority === 'high' ? 'عالي الأهمية' : req.priority === 'medium' ? 'متوسط' : 'منخفض'}
+                        {req.priority === 'high' ? t('high_priority') : req.priority === 'medium' ? t('medium_priority') : t('low_priority')}
                       </span>
                     </div>
                     <div className="flex items-center gap-3 mb-4 p-3 bg-slate-50 rounded-2xl">
@@ -1368,7 +1376,7 @@ const MaintenanceScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
                         <span className="text-[10px] font-black text-slate-400">{req.technician}</span>
                       </div>
                       <button className="text-xs font-black text-primary flex items-center gap-1 group-hover:gap-2 transition-all">
-                        التفاصيل
+                        {t('details')}
                         <Icon name="chevron_left" className="text-lg" />
                       </button>
                     </div>
@@ -1384,7 +1392,7 @@ const MaintenanceScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
                 <div className="size-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
                   <Icon name="search_off" className="text-3xl" />
                 </div>
-                <p className="text-slate-500 text-sm">لا توجد طلبات صيانة مطابقة</p>
+                <p className="text-slate-500 text-sm">{t('no_matching_requests')}</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -1456,6 +1464,7 @@ const ImageCarousel = ({ images }: { images: string[] }) => {
 };
 
 const SupportScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const { t } = useLang();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -1479,8 +1488,8 @@ const SupportScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
         >
           <Icon name="send" className="text-4xl" />
         </motion.div>
-        <h2 className="text-2xl font-bold mb-2">تم إرسال رسالتك!</h2>
-        <p className="text-slate-500">سيتواصل معك فريق الدعم الفني في أقرب وقت ممكن.</p>
+        <h2 className="text-2xl font-bold mb-2">{t('message_sent_success')}</h2>
+        <p className="text-slate-500">{t('support_team_contact')}</p>
       </div>
     );
   }
@@ -1491,14 +1500,14 @@ const SupportScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
         <button onClick={() => onSelect('manager_dashboard')} className="p-2 rounded-full hover:bg-black/5 transition-colors">
           <Icon name="arrow_forward" />
         </button>
-        <h1 className="text-lg font-bold">الدعم الفني</h1>
+        <h1 className="text-lg font-bold">{t('support_title')}</h1>
         <div className="w-10"></div>
       </header>
 
       <main className="p-5 space-y-8">
         <section className="text-center space-y-2">
-          <h2 className="text-2xl font-black text-brand-dark">كيف يمكننا مساعدتك؟</h2>
-          <p className="text-slate-500 text-sm">نحن هنا للإجابة على استفساراتك وحل مشكلاتك</p>
+          <h2 className="text-2xl font-black text-brand-dark">{t('how_can_we_help')}</h2>
+          <p className="text-slate-500 text-sm">{t('we_are_here')}</p>
         </section>
 
         <div className="grid grid-cols-2 gap-4">
@@ -1506,14 +1515,14 @@ const SupportScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
             <div className="size-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto">
               <Icon name="call" />
             </div>
-            <p className="text-xs font-bold">اتصال مباشر</p>
+            <p className="text-xs font-bold">{t('direct_call')}</p>
             <p className="text-[10px] text-slate-400">٩٢٠٠٠١٢٣٤</p>
           </div>
           <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm text-center space-y-2">
             <div className="size-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
               <Icon name="chat" />
             </div>
-            <p className="text-xs font-bold">واتساب</p>
+            <p className="text-xs font-bold">{t('whatsapp')}</p>
             <p className="text-[10px] text-slate-400">٠٥٠١٢٣٤٥٦٧</p>
           </div>
         </div>
@@ -1521,25 +1530,25 @@ const SupportScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
         <section className="bg-white rounded-3xl p-6 shadow-xl border border-primary/10">
           <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
             <Icon name="mail" className="text-primary" />
-            أرسل لنا رسالة
+            {t('send_us_message')}
           </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-500 mr-2">الموضوع</label>
+              <label className="text-xs font-bold text-slate-500 mr-2">{t('subject')}</label>
               <select required className="w-full bg-slate-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary transition-all">
-                <option value="">اختر نوع الاستفسار</option>
-                <option>مشكلة تقنية</option>
-                <option>استفسار مالي</option>
-                <option>اقتراح تحسين</option>
-                <option>أخرى</option>
+                <option value="">{t('choose_inquiry_type')}</option>
+                <option>{t('technical_issue')}</option>
+                <option>{t('financial_inquiry')}</option>
+                <option>{t('improvement_suggestion')}</option>
+                <option>{t('other')}</option>
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-500 mr-2">الرسالة</label>
+              <label className="text-xs font-bold text-slate-500 mr-2">{t('message')}</label>
               <textarea 
                 required 
                 rows={4}
-                placeholder="اكتب تفاصيل استفسارك هنا..."
+                placeholder={t('write_inquiry_details')}
                 className="w-full bg-slate-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary transition-all resize-none"
               ></textarea>
             </div>
@@ -1557,7 +1566,7 @@ const SupportScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
                 </motion.div>
               ) : (
                 <>
-                  إرسال الرسالة
+                  {t('send_message_btn')}
                   <Icon name="send" className="text-sm" />
                 </>
               )}
@@ -1832,6 +1841,7 @@ const PropertyDetailsScreen = ({ onSelect, property }: { onSelect: (v: View) => 
 };
 
 const NewMaintenanceRequestScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const { t } = useLang();
   const { PROPERTIES, UNITS, createMaintenanceRequest } = useAppData();
 
   // ── Controlled form state ────────────────────────────────────────────────
@@ -1849,9 +1859,9 @@ const NewMaintenanceRequestScreen = ({ onSelect }: { onSelect: (v: View) => void
 
   // ── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
-    if (!selectedProperty) { setError('يرجى اختيار المبنى'); return; }
-    if (!unit.trim())       { setError('يرجى إدخال رقم الوحدة'); return; }
-    if (!description.trim()){ setError('يرجى إدخال وصف المشكلة'); return; }
+    if (!selectedProperty) { setError(t('error_choose_building')); return; }
+    if (!unit.trim())       { setError(t('error_enter_unit')); return; }
+    if (!description.trim()){ setError(t('error_enter_description')); return; }
     setError('');
     setIsSubmitting(true);
     try {
@@ -1866,7 +1876,7 @@ const NewMaintenanceRequestScreen = ({ onSelect }: { onSelect: (v: View) => void
       setIsSuccess(true);
       setTimeout(() => onSelect('maintenance'), 1600);
     } catch {
-      setError('حدث خطأ أثناء الإرسال، حاول مرة أخرى');
+      setError(t('error_sending'));
     } finally {
       setIsSubmitting(false);
     }
@@ -1883,8 +1893,8 @@ const NewMaintenanceRequestScreen = ({ onSelect }: { onSelect: (v: View) => void
         >
           <Icon name="task_alt" className="text-6xl" />
         </motion.div>
-        <h2 className="text-2xl font-bold mb-2">تم إرسال الطلب!</h2>
-        <p className="text-slate-500">سيقوم فريق الصيانة بمراجعة طلبك قريباً.</p>
+        <h2 className="text-2xl font-bold mb-2">{t('request_submitted')}</h2>
+        <p className="text-slate-500">{t('maintenance_team_review')}</p>
       </div>
     );
   }
@@ -1896,20 +1906,20 @@ const NewMaintenanceRequestScreen = ({ onSelect }: { onSelect: (v: View) => void
         <button onClick={() => onSelect('maintenance')} className="flex size-12 items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
           <Icon name="arrow_forward" className="text-2xl" />
         </button>
-        <h2 className="text-lg font-bold flex-1 text-center pr-12">طلب صيانة جديد</h2>
+        <h2 className="text-lg font-bold flex-1 text-center pr-12">{t('new_maintenance_title')}</h2>
       </header>
 
       <main className="p-4 space-y-6">
         {/* Property selector */}
         <div className="space-y-4">
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-semibold">المبنى / العقار</label>
+            <label className="text-sm font-semibold">{t('building_property')}</label>
             <select
               value={selectedProperty}
               onChange={e => setSelectedProperty(e.target.value)}
               className="w-full rounded-xl border-none bg-white py-3.5 pr-4 pl-10 focus:ring-2 focus:ring-primary shadow-sm text-base transition-all"
             >
-              <option value="" disabled>اختر المبنى</option>
+              <option value="" disabled>{t('choose_building')}</option>
               {PROPERTIES.map(p => (
                 <option key={p.id} value={p.name}>{p.name} — {p.location}</option>
               ))}
@@ -1918,20 +1928,20 @@ const NewMaintenanceRequestScreen = ({ onSelect }: { onSelect: (v: View) => void
 
           {/* Unit */}
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-semibold">رقم الوحدة</label>
+            <label className="text-sm font-semibold">{t('unit_number')}</label>
             <select
               value={unit}
               onChange={e => setUnit(e.target.value)}
               className="w-full rounded-xl border-none bg-white py-3.5 pr-4 pl-10 focus:ring-2 focus:ring-primary shadow-sm text-base transition-all"
             >
-              <option value="" disabled>اختر الوحدة أو أدخل الرقم</option>
+              <option value="" disabled>{t('choose_unit')}</option>
               {UNITS.filter(u => !selectedProperty || u.property === selectedProperty).map(u => (
                 <option key={u.id} value={u.id}>{u.type} {u.id} — {u.property}</option>
               ))}
             </select>
             <input
               className="mt-1 w-full rounded-xl border-none bg-white py-3 px-4 focus:ring-2 focus:ring-primary shadow-sm transition-all text-sm"
-              placeholder="أو أدخل رقم الوحدة يدوياً..."
+              placeholder={t('enter_unit_manually')}
               value={unit}
               onChange={e => setUnit(e.target.value)}
             />
@@ -1940,7 +1950,7 @@ const NewMaintenanceRequestScreen = ({ onSelect }: { onSelect: (v: View) => void
 
         {/* Category */}
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold">فئة المشكلة</h3>
+          <h3 className="text-sm font-semibold">{t('problem_category')}</h3>
           <div className="grid grid-cols-3 gap-3">
             {[
               { label: 'سباكة',  icon: 'plumbing' },
@@ -1965,7 +1975,7 @@ const NewMaintenanceRequestScreen = ({ onSelect }: { onSelect: (v: View) => void
 
         {/* Priority */}
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold">مستوى الأولوية</h3>
+          <h3 className="text-sm font-semibold">{t('priority_level')}</h3>
           <div className="flex w-full rounded-xl bg-slate-100 p-1">
             {['منخفض', 'متوسط', 'عالي'].map((p, i) => (
               <button
@@ -1981,10 +1991,10 @@ const NewMaintenanceRequestScreen = ({ onSelect }: { onSelect: (v: View) => void
 
         {/* Description */}
         <div className="space-y-2">
-          <label className="text-sm font-semibold">الوصف</label>
+          <label className="text-sm font-semibold">{t('description')}</label>
           <textarea
             className="w-full min-h-[120px] rounded-xl border-none bg-white p-4 focus:ring-2 focus:ring-primary shadow-sm resize-none transition-all"
-            placeholder="اشرح المشكلة بالتفصيل..."
+            placeholder={t('describe_problem')}
             value={description}
             onChange={e => setDescription(e.target.value)}
           />
@@ -1992,14 +2002,14 @@ const NewMaintenanceRequestScreen = ({ onSelect }: { onSelect: (v: View) => void
 
         {/* Photo placeholder */}
         <div className="space-y-2">
-          <label className="text-sm font-semibold">إرفاق صور (اختياري)</label>
+          <label className="text-sm font-semibold">{t('attach_photos')}</label>
           <div className="flex gap-3 overflow-x-auto pb-2">
             <motion.button
               whileTap={{ scale: 0.95 }}
               className="flex h-24 w-24 shrink-0 flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 text-slate-400"
             >
               <Icon name="add_a_photo" className="text-3xl" />
-              <span className="text-[10px] font-medium">أضف صورة</span>
+              <span className="text-[10px] font-medium">{t('add_photo')}</span>
             </motion.button>
           </div>
         </div>
@@ -2026,8 +2036,8 @@ const NewMaintenanceRequestScreen = ({ onSelect }: { onSelect: (v: View) => void
           )}
         >
           {isSubmitting
-            ? <><span className="animate-spin text-xl">↻</span> جاري الإرسال...</>
-            : <><Icon name="send" /> إرسال الطلب</>}
+            ? <><span className="animate-spin text-xl">↻</span> {t('submitting')}</>
+            : <><Icon name="send" /> {t('submit_request')}</>}
         </button>
       </main>
     </div>
@@ -2162,14 +2172,15 @@ const TenantDashboard = ({ onSelect, onNavigateForms }: { onSelect: (v: View) =>
 };
 
 const SettingsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const { t } = useLang();
   return (
     <div className="min-h-screen bg-[#f8f8f5] pb-24">
       <header className="flex items-center justify-between p-4 bg-white sticky top-0 z-10 shadow-sm border-b border-primary/10">
         <button onClick={() => onSelect('manager_dashboard')} className="p-2 rounded-full hover:bg-slate-100 transition-colors">
           <Icon name="arrow_forward" className="text-2xl" />
         </button>
-        <h2 className="text-lg font-bold flex-1 text-center">إعدادات الحساب والهوية</h2>
-        <button className="text-primary font-bold text-sm px-2">حفظ</button>
+        <h2 className="text-lg font-bold flex-1 text-center">{t('settings_title')}</h2>
+        <button className="text-primary font-bold text-sm px-2">{t('save')}</button>
       </header>
 
       <main className="p-4 space-y-6">
@@ -2188,7 +2199,7 @@ const SettingsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
             </button>
           </div>
           <h3 className="mt-4 text-xl font-bold">أحمد محمد عبد الله</h3>
-          <p className="text-sm text-gray-500">مدير عقارات معتمد</p>
+          <p className="text-sm text-gray-500">{t('certified_property_manager')}</p>
           <p className="text-xs text-primary font-medium mt-1">ahmed.abdullah@estate-pro.sa</p>
         </section>
 
@@ -2506,6 +2517,7 @@ const ReportsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
 };
 
 const AddPropertyScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const { t } = useLang();
   const { PROPERTIES, addProperty } = useAppData();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -2516,7 +2528,7 @@ const AddPropertyScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
     e.preventDefault();
     setError(null);
     const exists = PROPERTIES.some(p => p.name === propertyName);
-    if (exists) { setError('هذا العقار موجود بالفعل في النظام (تكرار)'); return; }
+    if (exists) { setError(t('property_exists')); return; }
     setIsSubmitting(true);
     try {
       await addProperty({
@@ -2529,7 +2541,7 @@ const AddPropertyScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
       setIsSuccess(true);
       setTimeout(() => onSelect('manager_dashboard'), 1500);
     } catch {
-      setError('حدث خطأ أثناء الحفظ، حاول مرة أخرى');
+      setError(t('error_saving'));
     } finally {
       setIsSubmitting(false);
     }
@@ -2545,8 +2557,8 @@ const AddPropertyScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
         >
           <Icon name="check_circle" className="text-6xl" />
         </motion.div>
-        <h2 className="text-2xl font-bold mb-2">تمت الإضافة بنجاح!</h2>
-        <p className="text-slate-500">جاري توجيهك إلى لوحة التحكم...</p>
+        <h2 className="text-2xl font-bold mb-2">{t('property_added_success')}</h2>
+        <p className="text-slate-500">{t('redirecting_dashboard')}</p>
       </div>
     );
   }
@@ -2557,7 +2569,7 @@ const AddPropertyScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
         <button onClick={() => onSelect('manager_dashboard')} className="p-2 rounded-full hover:bg-slate-100 transition-colors">
           <Icon name="arrow_forward" className="text-2xl" />
         </button>
-        <h2 className="text-lg font-bold flex-1 text-center pr-12">إضافة عقار جديد</h2>
+        <h2 className="text-lg font-bold flex-1 text-center pr-12">{t('add_property_title')}</h2>
       </header>
       <main className="p-4">
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -2573,50 +2585,50 @@ const AddPropertyScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
           )}
           <div className="space-y-4">
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-bold">اسم العقار</label>
+              <label className="text-sm font-bold">{t('property_name')}</label>
               <input 
                 required 
                 value={propertyName}
                 onChange={(e) => setPropertyName(e.target.value)}
                 className="w-full rounded-xl border border-gray-200 bg-white py-3 px-4 focus:ring-2 focus:ring-primary outline-none transition-all" 
-                placeholder="مثال: برج النخيل" 
+                placeholder={t('property_name_placeholder')} 
                 type="text" 
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-bold">نوع العقار</label>
+              <label className="text-sm font-bold">{t('property_type')}</label>
               <select className="w-full rounded-xl border border-gray-200 bg-white py-3 px-4 focus:ring-2 focus:ring-primary outline-none transition-all">
-                <option>سكني</option>
-                <option>تجاري</option>
-                <option>مختلط</option>
+                <option>{t('residential')}</option>
+                <option>{t('commercial')}</option>
+                <option>{t('mixed')}</option>
               </select>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-bold">الموقع</label>
+              <label className="text-sm font-bold">{t('location')}</label>
               <div className="relative">
-                <input required className="w-full rounded-xl border border-gray-200 bg-white py-3 pr-10 pl-4 focus:ring-2 focus:ring-primary outline-none transition-all" placeholder="أدخل العنوان بالتفصيل" type="text" />
+                <input required className="w-full rounded-xl border border-gray-200 bg-white py-3 pr-10 pl-4 focus:ring-2 focus:ring-primary outline-none transition-all" placeholder={t('location_placeholder')} type="text" />
                 <Icon name="location_on" className="absolute right-3 top-3 text-gray-400" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-bold">عدد الوحدات</label>
+                <label className="text-sm font-bold">{t('unit_count_label')}</label>
                 <input required className="w-full rounded-xl border border-gray-200 bg-white py-3 px-4 focus:ring-2 focus:ring-primary outline-none transition-all" placeholder="0" type="number" />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-bold">سنة البناء</label>
+                <label className="text-sm font-bold">{t('build_year')}</label>
                 <input className="w-full rounded-xl border border-gray-200 bg-white py-3 px-4 focus:ring-2 focus:ring-primary outline-none transition-all" placeholder="2024" type="number" />
               </div>
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-bold">صور العقار</label>
+            <label className="text-sm font-bold">{t('property_photos')}</label>
             <motion.div 
               whileTap={{ scale: 0.98 }}
               className="w-full h-32 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-gray-400 bg-white cursor-pointer hover:bg-slate-50 transition-colors"
             >
               <Icon name="add_a_photo" className="text-3xl mb-1" />
-              <span className="text-xs">اضغط لرفع الصور</span>
+              <span className="text-xs">{t('click_upload')}</span>
             </motion.div>
           </div>
           <button 
@@ -2634,7 +2646,7 @@ const AddPropertyScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
               >
                 <Icon name="sync" />
               </motion.div>
-            ) : "حفظ العقار"}
+            ) : t('save_property')}
           </button>
         </form>
       </main>
@@ -6691,7 +6703,8 @@ export default function App() {
   };
 
   return (
-    <AppDataProvider>
+    <LanguageProvider>
+      <AppDataProvider>
       <div className="min-h-screen font-sans">
         <AnimatePresence mode="wait">
           <motion.div
@@ -6706,6 +6719,7 @@ export default function App() {
         </AnimatePresence>
       </div>
     </AppDataProvider>
+    </LanguageProvider>
   );
 };
 
@@ -7822,7 +7836,8 @@ export default function App() {
   };
 
   return (
-    <AppDataProvider>
+    <LanguageProvider>
+      <AppDataProvider>
       <div className="min-h-screen font-sans">
         <AnimatePresence mode="wait">
           <motion.div
@@ -7837,5 +7852,6 @@ export default function App() {
         </AnimatePresence>
       </div>
     </AppDataProvider>
+    </LanguageProvider>
   );
 }
