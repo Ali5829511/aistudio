@@ -180,6 +180,25 @@ const CONTRACTS = [
   { id: '6', tenant: 'نورة الدوسري', unit: 'فيلا ١٥', property: PROPERTIES[11].name, start: '٢٠٢٤/٠٢/١٠', end: '٢٠٢٥/٠٢/١٠', rent: '9,500', status: 'ساري' },
 ];
 
+const INVOICES = TENANTS.map((t, i) => ({
+  id: `#INV-2024-${String(i + 1).padStart(3, '0')}`,
+  tenant: t.name,
+  property: t.property,
+  unit: t.unit,
+  amount: t.rent,
+  status: t.paid ? 'مدفوعة' : (t.status === 'late' ? 'متأخرة' : 'غير مدفوعة'),
+  date: t.contractEnd.slice(0, 7),
+}));
+
+const VENDORS = [
+  { id: '1', name: 'شركة التكييف المتقدمة', service: 'صيانة تكييف', type: 'تكييف', rating: 4.8, status: 'available', phone: '966500000001', jobs: 32, city: 'الرياض' },
+  { id: '2', name: 'الكهربائي المتميز', service: 'أعمال كهرباء', type: 'كهرباء', rating: 4.5, status: 'busy', phone: '966500000002', jobs: 18, city: 'الرياض' },
+  { id: '3', name: 'سباكة الخليج', service: 'سباكة وعزل', type: 'سباكة', rating: 4.2, status: 'available', phone: '966500000003', jobs: 24, city: 'الرياض' },
+  { id: '4', name: 'شركة الدهانات الذهبية', service: 'دهانات وديكور', type: 'دهانات', rating: 4.6, status: 'available', phone: '966500000004', jobs: 15, city: 'جدة' },
+  { id: '5', name: 'مكافحة الآفات السريعة', service: 'مكافحة آفات', type: 'مكافحة', rating: 4.3, status: 'busy', phone: '966500000005', jobs: 9, city: 'الدمام' },
+  { id: '6', name: 'صيانة مصاعد الخليج', service: 'صيانة مصاعد', type: 'مصاعد', rating: 4.9, status: 'available', phone: '966500000006', jobs: 41, city: 'الرياض' },
+];
+
 // --- Shared Components ---
 
 const Icon = ({ name, className = "", filled = false }: { name: string, className?: string, filled?: boolean }) => (
@@ -845,6 +864,29 @@ const AccountingScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
 };
 
 const InvoicesScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const [activeFilter, setActiveFilter] = useState('الكل');
+  const filters = ['الكل', 'مدفوعة', 'غير مدفوعة', 'متأخرة'];
+
+  const filteredInvoices = INVOICES.filter(inv =>
+    activeFilter === 'الكل' || inv.status === activeFilter
+  );
+
+  const { totalCollected, totalPending } = INVOICES.reduce(
+    (acc, inv) => {
+      const val = Number(inv.amount.replace(',', ''));
+      if (inv.status === 'مدفوعة') acc.totalCollected += val;
+      else acc.totalPending += val;
+      return acc;
+    },
+    { totalCollected: 0, totalPending: 0 }
+  );
+
+  const statusColor = (s: string) => {
+    if (s === 'مدفوعة') return 'bg-emerald-100 text-emerald-700';
+    if (s === 'متأخرة') return 'bg-rose-100 text-rose-700';
+    return 'bg-amber-100 text-amber-700';
+  };
+
   return (
     <div className="min-h-screen bg-[#FDFDFD] pb-24">
       <header className="flex items-center justify-between px-6 py-5 bg-brand-dark sticky top-0 z-30 shadow-xl">
@@ -876,7 +918,7 @@ const InvoicesScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
             </div>
             <div className="relative z-10">
               <p className="text-xs text-slate-400 font-black uppercase tracking-widest mb-1">المحصل الكلي</p>
-              <h2 className="text-3xl font-black text-brand-dark tracking-tighter">٥٠,٠٠٠ <span className="text-sm font-bold text-slate-400">ر.س</span></h2>
+              <h2 className="text-3xl font-black text-brand-dark tracking-tighter">{toArabicDigits(totalCollected.toLocaleString())} <span className="text-sm font-bold text-slate-400">ر.س</span></h2>
             </div>
           </div>
           <div className="flex flex-col justify-between p-8 rounded-[2rem] bg-white shadow-sm border border-slate-100 relative overflow-hidden group">
@@ -889,17 +931,21 @@ const InvoicesScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
             </div>
             <div className="relative z-10">
               <p className="text-xs text-slate-400 font-black uppercase tracking-widest mb-1">الرصيد المستحق</p>
-              <h2 className="text-3xl font-black text-brand-dark tracking-tighter">١٢,٥٠٠ <span className="text-sm font-bold text-slate-400">ر.س</span></h2>
+              <h2 className="text-3xl font-black text-brand-dark tracking-tighter">{toArabicDigits(totalPending.toLocaleString())} <span className="text-sm font-bold text-slate-400">ر.س</span></h2>
             </div>
           </div>
         </div>
 
         <div className="flex gap-3 overflow-x-auto no-scrollbar py-2 -mx-6 px-6">
-          {['الكل', 'مدفوعة', 'غير مدفوعة', 'مدفوعة جزئياً'].map((f, i) => (
-            <button key={i} className={cn(
-              "whitespace-nowrap px-6 py-2.5 rounded-2xl text-xs font-black transition-all shadow-sm",
-              i === 0 ? "bg-brand-dark text-white" : "bg-white border border-slate-100 text-slate-500 hover:bg-slate-50"
-            )}>
+          {filters.map((f) => (
+            <button
+              key={f}
+              onClick={() => setActiveFilter(f)}
+              className={cn(
+                "whitespace-nowrap px-6 py-2.5 rounded-2xl text-xs font-black transition-all shadow-sm",
+                activeFilter === f ? "bg-brand-dark text-white" : "bg-white border border-slate-100 text-slate-500 hover:bg-slate-50"
+              )}
+            >
               {f}
             </button>
           ))}
@@ -907,37 +953,45 @@ const InvoicesScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
 
         <div className="space-y-4">
           <div className="flex items-center justify-between px-1">
-            <h3 className="text-xl font-black text-brand-dark">الفواتير الحديثة</h3>
-            <button className="text-primary text-xs font-black uppercase tracking-widest">عرض الكل</button>
+            <h3 className="text-xl font-black text-brand-dark">الفواتير {activeFilter !== 'الكل' ? `(${activeFilter})` : 'الحديثة'}</h3>
+            <span className="text-primary text-xs font-black">{toArabicDigits(filteredInvoices.length)} فاتورة</span>
           </div>
           <div className="space-y-3">
-            {[
-              { id: '#INV-2024-001', tenant: 'أحمد علي', property: 'عمارة النخيل', amount: '4,500 ر.س', status: 'مدفوعة', statusColor: 'bg-emerald-100 text-emerald-700' },
-              { id: '#INV-2024-002', tenant: 'سارة محمد', property: 'برج الياسمين', amount: '3,800 ر.س', status: 'غير مدفوعة', statusColor: 'bg-rose-100 text-rose-700' },
-              { id: '#INV-2024-003', tenant: 'خالد حسن', property: 'مجمع الروضة', amount: '5,200 ر.س', status: 'مدفوعة جزئياً', statusColor: 'bg-amber-100 text-amber-700' },
-            ].map((inv, i) => (
-              <motion.div 
-                key={i}
-                whileHover={{ scale: 1.01 }}
-                className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex items-center justify-between group cursor-pointer"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="size-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-brand-dark group-hover:text-white transition-all">
-                    <Icon name="receipt_long" className="text-xl" />
+            <AnimatePresence mode="popLayout">
+              {filteredInvoices.map((inv) => (
+                <motion.div
+                  key={inv.id}
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  whileHover={{ scale: 1.01 }}
+                  className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex items-center justify-between group cursor-pointer"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="size-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-brand-dark group-hover:text-white transition-all">
+                      <Icon name="receipt_long" className="text-xl" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-brand-dark">{inv.tenant}</p>
+                      <p className="text-[10px] font-bold text-slate-400 mt-0.5">{inv.property} — {inv.unit} • {inv.id}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-black text-brand-dark">{inv.tenant}</p>
-                    <p className="text-[10px] font-bold text-slate-400 mt-0.5">{inv.property} • {inv.id}</p>
+                  <div className="text-left">
+                    <p className="text-base font-black text-brand-dark">{toArabicDigits(inv.amount)} ر.س</p>
+                    <span className={cn("inline-block px-3 py-1 rounded-full text-[9px] font-black mt-1", statusColor(inv.status))}>
+                      {inv.status}
+                    </span>
                   </div>
-                </div>
-                <div className="text-left">
-                  <p className="text-base font-black text-brand-dark">{inv.amount}</p>
-                  <span className={cn("inline-block px-3 py-1 rounded-full text-[9px] font-black mt-1", inv.statusColor)}>
-                    {inv.status}
-                  </span>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+            {filteredInvoices.length === 0 && (
+              <div className="py-12 text-center">
+                <Icon name="receipt_long" className="text-4xl text-slate-300 mb-2" />
+                <p className="text-slate-400 text-sm">لا توجد فواتير بهذا الفلتر</p>
+              </div>
+            )}
           </div>
         </div>
       </main>
@@ -2502,34 +2556,134 @@ const TechnicalDocsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
 };
 
 const NotificationsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const [filter, setFilter] = useState('الكل');
+
+  // Generate smart notifications from data
+  const notifications = [
+    // Expiring contracts
+    ...CONTRACTS.filter(c => c.status === 'ينتهي قريباً').map(c => ({
+      id: `contract-${c.id}`,
+      title: 'تذكير: عقد ينتهي قريباً',
+      desc: `عقد المستأجر ${c.tenant} (${c.unit} - ${c.property}) ينتهي بتاريخ ${c.end}`,
+      time: 'منذ ساعة',
+      icon: 'event_busy',
+      color: 'text-red-600',
+      bg: 'bg-red-50',
+      category: 'عقود',
+    })),
+    // Late tenants
+    ...TENANTS.filter(t => !t.paid).map(t => ({
+      id: `tenant-${t.id}`,
+      title: 'تأخر في سداد الإيجار',
+      desc: `${t.name} (${t.unit} - ${t.property}) لم يسدد إيجار هذا الشهر بقيمة ${t.rent} ر.س`,
+      time: 'منذ يومين',
+      icon: 'payments',
+      color: 'text-amber-600',
+      bg: 'bg-amber-50',
+      category: 'مالية',
+    })),
+    // Active maintenance (high priority)
+    ...MAINTENANCE_REQUESTS.filter(r => r.status !== 'completed' && r.priority === 'high').map(r => ({
+      id: `maint-${r.id}`,
+      title: 'طلب صيانة عاجل',
+      desc: `${r.type}: ${r.description} — ${r.property} (${r.unit})`,
+      time: 'منذ 3 ساعات',
+      icon: 'build_circle',
+      color: 'text-orange-600',
+      bg: 'bg-orange-50',
+      category: 'صيانة',
+    })),
+    // Completed maintenance
+    ...MAINTENANCE_REQUESTS.filter(r => r.status === 'completed').slice(0, 2).map(r => ({
+      id: `done-${r.id}`,
+      title: 'طلب صيانة مكتمل',
+      desc: `تم إغلاق بلاغ ${r.type} في ${r.property} (${r.unit}) بواسطة ${r.technician}`,
+      time: 'أمس',
+      icon: 'task_alt',
+      color: 'text-green-600',
+      bg: 'bg-green-50',
+      category: 'صيانة',
+    })),
+    // System
+    {
+      id: 'sys-1',
+      title: 'تنبيه أمان',
+      desc: 'تم تسجيل دخول جديد لحسابك من جهاز غير معروف',
+      time: 'منذ يوم',
+      icon: 'security',
+      color: 'text-blue-600',
+      bg: 'bg-blue-50',
+      category: 'نظام',
+    },
+  ];
+
+  const categories = ['الكل', 'عقود', 'مالية', 'صيانة', 'نظام'];
+  const filtered = filter === 'الكل' ? notifications : notifications.filter(n => n.category === filter);
+
   return (
     <div className="min-h-screen bg-[#f8f8f5] pb-24">
       <header className="flex items-center justify-between p-4 bg-white sticky top-0 z-10 shadow-sm border-b border-primary/10">
         <button onClick={() => onSelect('manager_dashboard')} className="p-2 rounded-full hover:bg-slate-100 transition-colors">
           <Icon name="arrow_forward" className="text-2xl" />
         </button>
-        <h2 className="text-lg font-bold flex-1 text-center pr-12">مركز التنبيهات</h2>
+        <h2 className="text-lg font-bold flex-1 text-center pr-12">
+          مركز التنبيهات
+          {notifications.length > 0 && (
+            <span className="mr-2 text-xs font-black bg-red-500 text-white rounded-full px-1.5 py-0.5">{toArabicDigits(notifications.length)}</span>
+          )}
+        </h2>
       </header>
-      <main className="p-4 space-y-3">
-        {[
-          { title: 'تذكير: عقد ينتهي قريباً', desc: 'عقد المستأجر محمد العتيبي ينتهي خلال 30 يوم', time: 'منذ ساعة', icon: 'event_busy', color: 'text-red-600', bg: 'bg-red-50' },
-          { title: 'تم استلام دفعة جديدة', desc: 'تم تحصيل إيجار شقة 102 بنجاح', time: 'منذ 3 ساعات', icon: 'payments', color: 'text-green-600', bg: 'bg-green-50' },
-          { title: 'طلب صيانة مكتمل', desc: 'تم إغلاق بلاغ صيانة المكيف في فيلا 7', time: 'أمس', icon: 'task_alt', color: 'text-blue-600', bg: 'bg-blue-50' },
-          { title: 'تنبيه أمان', desc: 'تم تسجيل دخول جديد لحسابك من جهاز غير معروف', time: 'أمس', icon: 'security', color: 'text-orange-600', bg: 'bg-orange-50' },
-        ].map((notif, i) => (
-          <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-start gap-4">
-            <div className={`w-10 h-10 rounded-full ${notif.bg} ${notif.color} flex items-center justify-center shrink-0`}>
-              <Icon name={notif.icon} />
-            </div>
-            <div className="flex-1">
-              <div className="flex justify-between items-start mb-1">
-                <h4 className="font-bold text-sm">{notif.title}</h4>
-                <span className="text-[10px] text-gray-400">{notif.time}</span>
+      <main className="p-4 space-y-4">
+        {/* Filter tabs */}
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setFilter(cat)}
+              className={cn(
+                "whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all",
+                filter === cat ? "bg-brand-dark text-white shadow-md" : "bg-white border border-gray-100 text-gray-500"
+              )}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+
+        {/* Notification list */}
+        <AnimatePresence mode="popLayout">
+          {filtered.map((notif) => (
+            <motion.div
+              key={notif.id}
+              layout
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-start gap-4"
+            >
+              <div className={cn("w-10 h-10 rounded-full flex items-center justify-center shrink-0", notif.bg, notif.color)}>
+                <Icon name={notif.icon} />
               </div>
-              <p className="text-xs text-gray-500 leading-relaxed">{notif.desc}</p>
-            </div>
+              <div className="flex-1">
+                <div className="flex justify-between items-start mb-1">
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-sm">{notif.title}</h4>
+                    <span className={cn("text-[8px] font-black px-1.5 py-0.5 rounded-full", notif.bg, notif.color)}>{notif.category}</span>
+                  </div>
+                  <span className="text-[10px] text-gray-400 shrink-0 mr-2">{notif.time}</span>
+                </div>
+                <p className="text-xs text-gray-500 leading-relaxed">{notif.desc}</p>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+
+        {filtered.length === 0 && (
+          <div className="py-12 text-center">
+            <Icon name="notifications_off" className="text-4xl text-slate-300 mb-2" />
+            <p className="text-slate-400 text-sm">لا توجد تنبيهات</p>
           </div>
-        ))}
+        )}
       </main>
       <BottomNav active="manager_dashboard" onSelect={onSelect} />
     </div>
@@ -2881,7 +3035,7 @@ const PROPERTY_CONTEXT = (() => {
   const activeTenants = TENANTS.length;
   const rentedUnits = UNITS.filter(u => u.status === 'مؤجرة').length;
   const vacantUnits = UNITS.filter(u => u.status === 'شاغرة').length;
-  const occupancyPct = Math.round((rentedUnits / (rentedUnits + vacantUnits)) * 100);
+  const occupancyPct = (rentedUnits + vacantUnits) > 0 ? Math.round((rentedUnits / (rentedUnits + vacantUnits)) * 100) : 0;
   const activeMaintenanceRequests = MAINTENANCE_REQUESTS.filter(r => r.status !== 'completed').length;
   const highPriorityMaintenance = MAINTENANCE_REQUESTS.filter(r => r.priority === 'high' && r.status !== 'completed').length;
   const expiringContracts = CONTRACTS.filter(c => c.status === 'ينتهي قريباً').length;
@@ -3716,6 +3870,16 @@ const TenantsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) 
 };
 
 const VendorsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState('الكل');
+  const serviceTypes = ['الكل', ...Array.from(new Set(VENDORS.map(v => v.type)))];
+
+  const filtered = VENDORS.filter(v => {
+    const matchType = activeFilter === 'الكل' || v.type === activeFilter;
+    const matchSearch = !searchQuery || v.name.toLowerCase().includes(searchQuery.toLowerCase()) || v.service.toLowerCase().includes(searchQuery.toLowerCase()) || v.city.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchType && matchSearch;
+  });
+
   return (
     <div className="min-h-screen bg-[#f8f8f5] pb-24">
       <header className="flex items-center justify-between p-4 bg-white sticky top-0 z-10 shadow-sm border-b border-primary/10">
@@ -3728,45 +3892,108 @@ const VendorsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) 
         </button>
       </header>
       <main className="p-4 space-y-4">
-        <div className="grid grid-cols-1 gap-3">
+        {/* Summary stats */}
+        <div className="grid grid-cols-3 gap-3">
           {[
-            { name: 'شركة التكييف المتقدمة', service: 'صيانة تكييف', rating: 4.8, status: 'available', phone: '966500000001' },
-            { name: 'الكهربائي المتميز', service: 'أعمال كهرباء', rating: 4.5, status: 'busy', phone: '966500000002' },
-            { name: 'سباكة الخليج', service: 'سباكة وعزل', rating: 4.2, status: 'available', phone: '966500000003' },
-          ].map((vendor, i) => (
-            <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
-                  <Icon name="engineering" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm">{vendor.name}</h4>
-                  <p className="text-[10px] text-gray-400">{vendor.service}</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    <Icon name="star" className="text-[10px] text-amber-400" filled />
-                    <span className="text-[10px] font-bold">{vendor.rating}</span>
-                  </div>
-                </div>
+            { label: 'الإجمالي', value: toArabicDigits(VENDORS.length), icon: 'engineering', bg: 'bg-blue-50', color: 'text-blue-600' },
+            { label: 'متاح', value: toArabicDigits(VENDORS.filter(v => v.status === 'available').length), icon: 'check_circle', bg: 'bg-green-50', color: 'text-green-600' },
+            { label: 'مشغول', value: toArabicDigits(VENDORS.filter(v => v.status === 'busy').length), icon: 'schedule', bg: 'bg-amber-50', color: 'text-amber-600' },
+          ].map((stat, i) => (
+            <div key={i} className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center gap-1">
+              <div className={cn("size-9 rounded-xl flex items-center justify-center", stat.bg, stat.color)}>
+                <Icon name={stat.icon} className="text-lg" />
               </div>
-              <div className="flex flex-col items-end gap-2">
-                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${vendor.status === 'available' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                  {vendor.status === 'available' ? 'متاح' : 'مشغول'}
-                </span>
-                <div className="flex items-center gap-2">
-                  <a 
+              <p className="text-xl font-black text-brand-dark">{stat.value}</p>
+              <p className="text-[9px] font-bold text-slate-400">{stat.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Search */}
+        <div className="relative">
+          <Icon name="search" className="absolute right-3 top-3 text-gray-400" />
+          <input
+            className="w-full rounded-xl border-none bg-white py-3 pr-10 pl-4 shadow-sm text-sm outline-none"
+            placeholder="بحث عن مورد أو فني..."
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        {/* Type filter */}
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          {serviceTypes.map((type) => (
+            <button
+              key={type}
+              onClick={() => setActiveFilter(type)}
+              className={cn(
+                "whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all",
+                activeFilter === type ? "bg-brand-dark text-white shadow-md" : "bg-white border border-gray-100 text-gray-500"
+              )}
+            >
+              {type}
+            </button>
+          ))}
+        </div>
+
+        {/* Vendor list */}
+        <div className="space-y-3">
+          <AnimatePresence mode="popLayout">
+            {filtered.map((vendor) => (
+              <motion.div
+                key={vendor.id}
+                layout
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0">
+                      <Icon name="engineering" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm text-brand-dark">{vendor.name}</h4>
+                      <p className="text-[10px] text-gray-400">{vendor.service} • {vendor.city}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-0.5">
+                          <Icon name="star" className="text-[10px] text-amber-400" filled />
+                          <span className="text-[10px] font-bold">{vendor.rating}</span>
+                        </div>
+                        <span className="text-[10px] text-gray-400">• {toArabicDigits(vendor.jobs)} مهمة</span>
+                      </div>
+                    </div>
+                  </div>
+                  <span className={cn("text-[9px] font-bold px-2 py-1 rounded-full", vendor.status === 'available' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700')}>
+                    {vendor.status === 'available' ? 'متاح' : 'مشغول'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 pt-3 border-t border-gray-50">
+                  <a
                     href={`https://wa.me/${vendor.phone}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-                    title="تواصل عبر واتساب"
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-green-500 text-white rounded-xl text-xs font-bold hover:bg-green-600 transition-colors"
                   >
                     <Icon name="chat" className="text-sm" />
+                    واتساب
                   </a>
-                  <button className="text-[10px] text-primary font-bold px-3 py-1.5 bg-primary/5 rounded-lg">طلب خدمة</button>
+                  <button className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-primary/10 text-primary rounded-xl text-xs font-bold hover:bg-primary/20 transition-colors">
+                    <Icon name="send" className="text-sm" />
+                    طلب خدمة
+                  </button>
                 </div>
-              </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          {filtered.length === 0 && (
+            <div className="py-12 text-center">
+              <Icon name="search_off" className="text-4xl text-slate-300 mb-2" />
+              <p className="text-slate-400 text-sm">لا توجد نتائج مطابقة</p>
             </div>
-          ))}
+          )}
         </div>
       </main>
       <BottomNav active="manager_dashboard" onSelect={onSelect} />
