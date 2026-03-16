@@ -2217,30 +2217,60 @@ const OwnersManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) =
           <Icon name="arrow_forward" className="text-2xl" />
         </button>
         <h2 className="text-lg font-bold flex-1 text-center pr-12">إدارة الملاك</h2>
+        <button className="p-2 bg-primary/10 text-primary rounded-full">
+          <Icon name="person_add" />
+        </button>
       </header>
       <main className="p-4 space-y-4">
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
-          <div>
-            <p className="text-xs text-gray-500">إجمالي الملاك</p>
-            <h3 className="text-xl font-bold">١٥ مالك</h3>
+        {/* Summary card */}
+        <div className="bg-brand-dark text-white p-6 rounded-3xl shadow-lg relative overflow-hidden">
+          <div className="relative z-10 flex items-center justify-between">
+            <div>
+              <p className="text-xs opacity-70 mb-1">إجمالي الملاك</p>
+              <h3 className="text-4xl font-black">{toArabicDigits(OWNERS.length)}</h3>
+              <p className="text-[10px] text-primary mt-2 font-bold">
+                {toArabicDigits(OWNERS.filter(o => o.status === 'نشط').length)} نشط •{' '}
+                {toArabicDigits(OWNERS.filter(o => o.status !== 'نشط').length)} غير نشط
+              </p>
+            </div>
+            <div className="size-16 gold-gradient rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20">
+              <Icon name="real_estate_agent" className="text-brand-dark text-3xl" />
+            </div>
           </div>
-          <button className="bg-primary text-white p-2 rounded-xl"><Icon name="person_add" /></button>
+          <Icon name="business" className="absolute -bottom-4 -left-4 text-8xl opacity-10 rotate-12" />
         </div>
-        {[
-          { name: 'عبد الرحمن السديري', properties: 5, phone: '٠٥٠١٢٣٤٥٦٧', status: 'نشط' },
-          { name: 'شركة نجد للاستثمار', properties: 12, phone: '٠١١٤٥٦٧٨٩٠', status: 'نشط' },
-          { name: 'فهد بن سلطان', properties: 3, phone: '٠٥٥٩٨٧٦٥٤٣', status: 'غير نشط' },
-        ].map((owner, i) => (
-          <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
-            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
-              <Icon name="person" className="text-2xl" />
+
+        {/* Owner list */}
+        {OWNERS.map((owner) => (
+          <motion.div
+            key={owner.id}
+            whileHover={{ y: -2 }}
+            className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"
+          >
+            <div className="flex items-center gap-4 mb-3">
+              <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
+                <Icon name="person" className="text-2xl" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-bold text-brand-dark">{owner.name}</h4>
+                <p className="text-xs text-gray-500">{toArabicDigits(owner.properties)} عقارات • {owner.phone}</p>
+              </div>
+              <span className={cn(
+                "text-[10px] font-bold px-2 py-1 rounded-full",
+                owner.status === 'نشط' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+              )}>{owner.status}</span>
             </div>
-            <div className="flex-1">
-              <h4 className="font-bold">{owner.name}</h4>
-              <p className="text-xs text-gray-500">{owner.properties} عقارات • {owner.phone}</p>
+            <div className="flex items-center justify-between pt-3 border-t border-gray-50">
+              <div className="flex items-center gap-1 text-[10px] text-slate-500">
+                <Icon name="payments" className="text-[12px] text-primary" />
+                <span className="font-bold">{owner.totalRevenue} ر.س/شهر</span>
+              </div>
+              <div className="flex items-center gap-1 text-[10px] text-slate-400">
+                <Icon name="mail" className="text-[12px]" />
+                <span>{owner.email}</span>
+              </div>
             </div>
-            <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${owner.status === 'نشط' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{owner.status}</span>
-          </div>
+          </motion.div>
         ))}
       </main>
       <BottomNav active="manager_dashboard" onSelect={onSelect} />
@@ -2315,6 +2345,19 @@ const UnitsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) =>
 };
 
 const ContractsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const [activeFilter, setActiveFilter] = useState('الكل');
+  const filters = ['الكل', 'ساري', 'ينتهي قريباً', 'منتهي'];
+
+  const filtered = CONTRACTS.filter(c =>
+    activeFilter === 'الكل' || c.status === activeFilter
+  );
+
+  const statusStyle = (s: string) => {
+    if (s === 'ساري') return 'bg-green-100 text-green-700';
+    if (s === 'ينتهي قريباً') return 'bg-amber-100 text-amber-700';
+    return 'bg-red-100 text-red-700';
+  };
+
   return (
     <div className="min-h-screen bg-[#f8f8f5] pb-24">
       <header className="flex items-center justify-between p-4 bg-white sticky top-0 z-10 shadow-sm border-b border-primary/10">
@@ -2322,30 +2365,97 @@ const ContractsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }
           <Icon name="arrow_forward" className="text-2xl" />
         </button>
         <h2 className="text-lg font-bold flex-1 text-center pr-12">إدارة العقود</h2>
+        <button className="p-2 bg-primary/10 text-primary rounded-full">
+          <Icon name="add" />
+        </button>
       </header>
       <main className="p-4 space-y-4">
-        {[
-          { tenant: 'محمد العتيبي', unit: 'شقة ١٠٢', end: '٢٠٢٤/١٢/٣١', status: 'ساري' },
-          { tenant: 'شركة الأفق', unit: 'مكتب ٥', end: '٢٠٢٤/٠٦/١٥', status: 'ينتهي قريباً' },
-          { tenant: 'سارة العمري', unit: 'فيلا ١٢', end: '٢٠٢٥/٠١/٢٠', status: 'ساري' },
-        ].map((contract, i) => (
-          <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-            <div className="flex justify-between items-start mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center"><Icon name="description" /></div>
+        {/* Stats row */}
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: 'سارية', value: toArabicDigits(CONTRACTS.filter(c => c.status === 'ساري').length), cls: 'bg-green-50 text-green-600' },
+            { label: 'تنتهي قريباً', value: toArabicDigits(CONTRACTS.filter(c => c.status === 'ينتهي قريباً').length), cls: 'bg-amber-50 text-amber-600' },
+            { label: 'منتهية', value: toArabicDigits(CONTRACTS.filter(c => c.status === 'منتهي').length), cls: 'bg-red-50 text-red-600' },
+          ].map((s, i) => (
+            <div key={i} className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 text-center">
+              <p className={cn("text-2xl font-black", s.cls.split(' ')[1])}>{s.value}</p>
+              <p className="text-[9px] font-bold text-slate-400 mt-0.5">{s.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Filter tabs */}
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          {filters.map((f) => (
+            <button
+              key={f}
+              onClick={() => setActiveFilter(f)}
+              className={cn(
+                "whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all",
+                activeFilter === f
+                  ? 'bg-primary text-white shadow-md shadow-primary/20'
+                  : 'bg-white border border-gray-100 text-gray-500 hover:bg-slate-50'
+              )}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+
+        {/* Contract list */}
+        <AnimatePresence mode="popLayout">
+          {filtered.map((contract) => (
+            <motion.div
+              key={contract.id}
+              layout
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"
+            >
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-slate-50 text-primary rounded-xl flex items-center justify-center">
+                    <Icon name="history_edu" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-brand-dark">{contract.tenant}</h4>
+                    <p className="text-xs text-gray-500">{contract.property} — {contract.unit}</p>
+                  </div>
+                </div>
+                <span className={cn("text-[10px] font-bold px-2 py-1 rounded-full", statusStyle(contract.status))}>
+                  {contract.status}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 pt-3 border-t border-gray-50">
                 <div>
-                  <h4 className="font-bold">{contract.tenant}</h4>
-                  <p className="text-xs text-gray-500">{contract.unit}</p>
+                  <p className="text-[9px] text-gray-400 mb-0.5">الإيجار الشهري</p>
+                  <p className="text-xs font-black text-primary">{toArabicDigits(contract.rent)} ر.س</p>
+                </div>
+                <div>
+                  <p className="text-[9px] text-gray-400 mb-0.5">بداية العقد</p>
+                  <p className="text-xs font-bold text-brand-dark">{contract.start}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] text-gray-400 mb-0.5">نهاية العقد</p>
+                  <p className="text-xs font-bold text-brand-dark">{contract.end}</p>
                 </div>
               </div>
-              <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${contract.status === 'ساري' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{contract.status}</span>
-            </div>
-            <div className="flex justify-between items-center pt-3 border-t border-gray-50">
-              <p className="text-[10px] text-gray-400">تاريخ الانتهاء: {contract.end}</p>
-              <button className="text-primary text-xs font-bold flex items-center gap-1">تجديد <Icon name="refresh" className="text-xs" /></button>
-            </div>
+              {contract.status !== 'منتهي' && (
+                <button className="mt-3 w-full text-primary text-xs font-bold flex items-center justify-center gap-1 py-2 rounded-xl bg-primary/5 hover:bg-primary/10 transition-colors">
+                  <Icon name="refresh" className="text-xs" /> تجديد العقد
+                </button>
+              )}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+
+        {filtered.length === 0 && (
+          <div className="py-12 text-center">
+            <Icon name="search_off" className="text-4xl text-slate-300 mb-2" />
+            <p className="text-slate-400 text-sm">لا توجد عقود بهذه الحالة</p>
           </div>
-        ))}
+        )}
       </main>
       <BottomNav active="manager_dashboard" onSelect={onSelect} />
     </div>
@@ -2862,7 +2972,7 @@ const AIAssistantScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
                 </div>
                 <p className={cn(
                   "text-[9px] text-slate-400 px-1",
-                  msg.role === 'user' ? "text-right" : "text-right"
+                  msg.role === 'user' ? "text-right" : "text-left"
                 )}>
                   {formatTime(msg.timestamp)}
                 </p>
@@ -3320,6 +3430,20 @@ const ArchiveScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
 };
 
 const TenantsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filtered = TENANTS.filter(t =>
+    t.name.includes(searchQuery) ||
+    t.unit.includes(searchQuery) ||
+    t.property.includes(searchQuery)
+  );
+
+  const statusLabel = (s: string) => {
+    if (s === 'active') return { label: 'نشط', cls: 'bg-green-100 text-green-700' };
+    if (s === 'expiring') return { label: 'ينتهي قريباً', cls: 'bg-amber-100 text-amber-700' };
+    return { label: 'متأخر', cls: 'bg-red-100 text-red-700' };
+  };
+
   return (
     <div className="min-h-screen bg-[#f8f8f5] pb-24">
       <header className="flex items-center justify-between p-4 bg-white sticky top-0 z-10 shadow-sm border-b border-primary/10">
@@ -3332,34 +3456,80 @@ const TenantsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) 
         </button>
       </header>
       <main className="p-4 space-y-4">
-        <div className="relative">
-          <Icon name="search" className="absolute right-3 top-3 text-gray-400" />
-          <input className="w-full rounded-xl border-none bg-white py-3 pr-10 pl-4 shadow-sm text-sm" placeholder="بحث عن مستأجر..." type="text" />
-        </div>
-        <div className="space-y-3">
+        {/* Summary */}
+        <div className="grid grid-cols-3 gap-3">
           {[
-            { name: 'محمد العتيبي', unit: 'شقة ٤٠٢', property: 'برج الياسمين', status: 'active', paid: true },
-            { name: 'سارة القحطاني', unit: 'فيلا ٧', property: 'حي النرجس', status: 'active', paid: false },
-            { name: 'عبدالله الشمري', unit: 'مكتب ١٠١', property: 'برج النخيل', status: 'expiring', paid: true },
-          ].map((tenant, i) => (
-            <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 font-bold">
-                  {tenant.name[0]}
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm">{tenant.name}</h4>
-                  <p className="text-[10px] text-gray-400">{tenant.property} - {tenant.unit}</p>
-                </div>
+            { label: 'الإجمالي', value: toArabicDigits(TENANTS.length), icon: 'group', bg: 'bg-blue-50', color: 'text-blue-600' },
+            { label: 'مدفوعون', value: toArabicDigits(TENANTS.filter(t => t.paid).length), icon: 'check_circle', bg: 'bg-green-50', color: 'text-green-600' },
+            { label: 'متأخرون', value: toArabicDigits(TENANTS.filter(t => !t.paid).length), icon: 'warning', bg: 'bg-red-50', color: 'text-red-600' },
+          ].map((stat, i) => (
+            <div key={i} className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center gap-1">
+              <div className={cn("size-9 rounded-xl flex items-center justify-center", stat.bg, stat.color)}>
+                <Icon name={stat.icon} className="text-lg" />
               </div>
-              <div className="text-left">
-                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${tenant.paid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                  {tenant.paid ? 'مدفوع' : 'متأخر'}
-                </span>
-                <p className="text-[10px] text-gray-400 mt-1">عرض الملف</p>
-              </div>
+              <p className="text-xl font-black text-brand-dark">{stat.value}</p>
+              <p className="text-[9px] font-bold text-slate-400">{stat.label}</p>
             </div>
           ))}
+        </div>
+
+        {/* Search */}
+        <div className="relative">
+          <Icon name="search" className="absolute right-3 top-3 text-gray-400" />
+          <input
+            className="w-full rounded-xl border-none bg-white py-3 pr-10 pl-4 shadow-sm text-sm outline-none"
+            placeholder="بحث عن مستأجر، وحدة، أو عقار..."
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        {/* List */}
+        <div className="space-y-3">
+          {filtered.length === 0 && (
+            <div className="py-12 text-center">
+              <Icon name="person_search" className="text-4xl text-slate-300 mb-2" />
+              <p className="text-slate-400 text-sm">لا توجد نتائج مطابقة</p>
+            </div>
+          )}
+          {filtered.map((tenant) => {
+            const st = statusLabel(tenant.status);
+            return (
+              <motion.div
+                key={tenant.id}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 gold-gradient rounded-full flex items-center justify-center text-brand-dark font-black text-base shadow-sm">
+                      {tenant.name[0]}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm text-brand-dark">{tenant.name}</h4>
+                      <p className="text-[10px] text-gray-400">{tenant.property} — {tenant.unit}</p>
+                    </div>
+                  </div>
+                  <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full", st.cls)}>{st.label}</span>
+                </div>
+                <div className="flex items-center justify-between pt-3 border-t border-gray-50">
+                  <div className="flex items-center gap-1 text-[10px] text-slate-500">
+                    <Icon name="payments" className="text-[12px] text-primary" />
+                    <span className="font-bold">{toArabicDigits(tenant.rent)} ر.س/شهر</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-[10px] text-slate-500">
+                    <Icon name="calendar_month" className="text-[12px] text-slate-400" />
+                    <span>{tenant.contractEnd}</span>
+                  </div>
+                  <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full", tenant.paid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
+                    {tenant.paid ? 'مدفوع' : 'متأخر'}
+                  </span>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
       </main>
       <BottomNav active="manager_dashboard" onSelect={onSelect} />
