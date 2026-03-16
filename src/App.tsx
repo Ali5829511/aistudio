@@ -3494,32 +3494,36 @@ const AIAssistantScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
     setIsLoading(true);
 
     try {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error('مفتاح GEMINI_API_KEY غير موجود. أضفه في ملف .env.local');
-      }
-      const { GoogleGenAI } = await import('@google/genai');
-      const ai = new GoogleGenAI({ apiKey });
-
       // Build conversation history for context
       const history = messages.slice(1).map(m => ({
         role: (m.role === 'user' ? 'user' : 'model') as 'user' | 'model',
         parts: [{ text: m.text }],
       }));
 
-      const result = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: [
-          ...history,
-          { role: 'user', parts: [{ text: text.trim() }] },
-        ],
-        config: { systemInstruction: PROPERTY_CONTEXT },
+      // Call secure backend endpoint that communicates with Gemini using server-side API key
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          history,
+          prompt: text.trim(),
+          systemInstruction: PROPERTY_CONTEXT,
+        }),
       });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(errorBody || 'فشل طلب الدردشة إلى الخادم');
+      }
+
+      const data: { text?: string } = await response.json();
 
       const assistantMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        text: result.text ?? 'لم أتمكن من الحصول على إجابة. يرجى المحاولة مرة أخرى.',
+        text: data.text ?? 'لم أتمكن من الحصول على إجابة. يرجى المحاولة مرة أخرى.',
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, assistantMsg]);
