@@ -1245,7 +1245,7 @@ const InvoicesScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
 };
 
 const MaintenanceScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { MAINTENANCE_REQUESTS } = useAppData();
   const [activeTab, setActiveTab] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
@@ -2813,90 +2813,6 @@ const UnitsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) =>
     activeFilter === 'الكل' || unit.status === activeFilter
   );
 
-      {/* Quick Send Modal */}
-      <AnimatePresence>
-        {quickSendOwner && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center p-4"
-            onClick={() => { if (!ownerSendDone) setQuickSendOwner(null); }}
-          >
-            <motion.div
-              initial={{ y: 60, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 60, opacity: 0 }}
-              onClick={e => e.stopPropagation()}
-              className="bg-white rounded-3xl w-full max-w-lg p-6 shadow-2xl"
-            >
-              {ownerSendDone ? (
-                <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="flex flex-col items-center py-6 text-center">
-                  <div className="size-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-3">
-                    <Icon name="check_circle" className="text-4xl" />
-                  </div>
-                  <h3 className="text-lg font-black text-brand-dark">تم الإرسال!</h3>
-                  <p className="text-xs text-slate-400 mt-1">تم إرسال الرسالة إلى {quickSendOwner.name}</p>
-                </motion.div>
-              ) : (
-                <>
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="size-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
-                      <Icon name="real_estate_agent" className="text-lg" />
-                    </div>
-                    <div>
-                      <h3 className="font-black text-brand-dark">{quickSendOwner.name}</h3>
-                      <p className="text-[10px] text-slate-400">{toArabicDigits(quickSendOwner.properties)} عقار • {quickSendOwner.email}</p>
-                    </div>
-                  </div>
-                  <p className="text-xs font-bold text-slate-500 mb-3">اختر القالب المناسب للمالك:</p>
-                  <div className="space-y-2 max-h-64 overflow-y-auto mb-4">
-                    {MSG_TEMPLATES.filter(t => t.recipient === 'مالك').map(tmpl => (
-                      <button
-                        key={tmpl.id}
-                        onClick={() => { setOwnerSendDone(true); setTimeout(() => setQuickSendOwner(null), 1600); }}
-                        className={cn("w-full text-right p-3 rounded-xl border flex items-start gap-3 transition-all hover:border-emerald-300 hover:bg-emerald-50", tmpl.bg, "border-transparent")}
-                      >
-                        <div className={cn("size-8 rounded-lg flex items-center justify-center shrink-0 bg-white/60", tmpl.color)}>
-                          <Icon name={tmpl.icon} className="text-sm" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <p className="text-xs font-black text-brand-dark">{tmpl.title}</p>
-                            {tmpl.auto && <span className="text-[8px] font-black bg-primary/10 text-primary px-1.5 py-0.5 rounded-full shrink-0">آلي</span>}
-                          </div>
-                          <p className="text-[10px] text-slate-400 font-bold">{tmpl.category}</p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                  <button
-                    onClick={() => setQuickSendOwner(null)}
-                    className="w-full py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-colors"
-                  >
-                    إلغاء
-                  </button>
-                </>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <BottomNav active="manager_dashboard" onSelect={onSelect} />
-    </div>
-  );
-};
-
-const UnitsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
-  const { UNITS } = useAppData();
-  const [activeFilter, setActiveFilter] = useState('الكل');
-  const filters = ['الكل', 'شاغرة', 'مؤجرة', 'تحت الصيانة'];
-
-  const filteredUnits = UNITS.filter(unit => 
-    activeFilter === 'الكل' || unit.status === activeFilter
-  );
-
   return (
     <div className="min-h-screen bg-[#f8f8f5] pb-24">
       <header className="flex items-center justify-between p-4 bg-white sticky top-0 z-10 shadow-sm border-b border-primary/10">
@@ -4293,6 +4209,10 @@ const DeveloperCenterScreen = ({ onSelect }: { onSelect: (v: View) => void }) =>
           ))}
         </div>
       </main>
+      <BottomNav active="manager_dashboard" onSelect={onSelect} />
+    </div>
+  );
+};
 
 const ArchiveScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
   const [searchQuery, setSearchQuery] = useState('');
