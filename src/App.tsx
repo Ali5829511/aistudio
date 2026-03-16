@@ -45,7 +45,9 @@ type View =
   | 'tenant_satisfaction'
   | 'tenants_management'
   | 'vendors_management'
-  | 'asset_management';
+  | 'asset_management'
+  | 'property_report'
+  | 'official_print';
 
 // --- Constants & Mock Data ---
 
@@ -282,7 +284,7 @@ const WelcomeScreen = ({ onSelect }: { onSelect: (view: View) => void }) => {
   );
 };
 
-const ManagerDashboard = ({ onSelect }: { onSelect: (v: View) => void }) => {
+const ManagerDashboard = ({ onSelect, onSelectProperty }: { onSelect: (v: View) => void, onSelectProperty: (v: View, p: any) => void }) => {
   const chartData = [
     { name: 'يناير', value: 4000 },
     { name: 'فبراير', value: 3000 },
@@ -527,7 +529,7 @@ const ManagerDashboard = ({ onSelect }: { onSelect: (v: View) => void }) => {
               <motion.div 
                 key={prop.id}
                 whileHover={{ y: -8 }}
-                onClick={() => onSelect('property_details')}
+                onClick={() => onSelectProperty('property_details', prop)}
                 className="min-w-[280px] bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden cursor-pointer group"
               >
                 <div className="h-40 bg-slate-200 relative overflow-hidden">
@@ -541,11 +543,36 @@ const ManagerDashboard = ({ onSelect }: { onSelect: (v: View) => void }) => {
                   <div className="absolute top-4 right-4 bg-primary text-brand-dark px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
                     {prop.type}
                   </div>
-                  <div className="absolute bottom-4 right-4 left-4">
+                  <div className="absolute bottom-4 right-4 left-4 flex justify-between items-end">
                      <p className="text-white text-xs font-bold flex items-center gap-1">
                         <Icon name="location_on" className="text-sm text-primary" />
                         {prop.location}
                      </p>
+                     <div className="flex gap-2">
+                       <button 
+                         onClick={(e) => {
+                           e.stopPropagation();
+                           onSelectProperty('property_report', prop);
+                         }}
+                         className="size-8 bg-white/20 backdrop-blur-md rounded-lg flex items-center justify-center text-white hover:bg-primary hover:text-brand-dark transition-all"
+                         title="تقرير العقار"
+                       >
+                         <Icon name="description" className="text-lg" />
+                       </button>
+                       <button 
+                         onClick={(e) => {
+                           e.stopPropagation();
+                           // We need to set selected property and then print
+                           // Since we are in ManagerDashboard, we can use a callback or global state
+                           (window as any).selectProperty(prop);
+                           setTimeout(() => window.print(), 500);
+                         }}
+                         className="size-8 bg-white/20 backdrop-blur-md rounded-lg flex items-center justify-center text-white hover:bg-brand-yellow hover:text-brand-dark transition-all"
+                         title="طباعة سريعة"
+                       >
+                         <Icon name="print" className="text-lg" />
+                       </button>
+                     </div>
                   </div>
                 </div>
                 <div className="p-6">
@@ -1258,7 +1285,7 @@ const TenantSatisfactionReportScreen = ({ onSelect }: { onSelect: (v: View) => v
   );
 };
 
-const PropertyDetailsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+const PropertyDetailsScreen = ({ onSelect, property }: { onSelect: (v: View) => void, property: any }) => {
   return (
     <div className="min-h-screen bg-[#f8f7f6] pb-24">
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-primary/10 px-4 pt-12 pb-4 flex items-center justify-between">
@@ -1266,17 +1293,33 @@ const PropertyDetailsScreen = ({ onSelect }: { onSelect: (v: View) => void }) =>
           <Icon name="arrow_forward" />
         </button>
         <h1 className="text-lg font-bold">تفاصيل العقار</h1>
-        <button className="p-2 rounded-full hover:bg-black/5 transition-colors text-primary">
-          <Icon name="edit" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => window.print()}
+            className="p-2 rounded-full hover:bg-black/5 transition-colors text-slate-400"
+            title="طباعة سريعة"
+          >
+            <Icon name="print" />
+          </button>
+          <button 
+            onClick={() => onSelect('property_report')}
+            className="p-2 rounded-full hover:bg-black/5 transition-colors text-primary"
+            title="تقرير العقار"
+          >
+            <Icon name="description" />
+          </button>
+          <button className="p-2 rounded-full hover:bg-black/5 transition-colors text-primary">
+            <Icon name="edit" />
+          </button>
+        </div>
       </header>
 
       <main className="space-y-6">
         <div className="px-5">
           <ImageCarousel images={[
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuBHxRsQiWQgQazf35cVFVUTuDNuG1NZTvdTiT-GQlZCLNXzGWipuJt0NuHfwVqfZ9mKGFEehtxBHithzPfwTXhYpYyEBsxXv3CvEMHPsTr8bexux327BPGAY0hxzBmkZBywL0bxOgpOrFRnBrFQoylcL8fgp8GYNEUbWRjppqZ_L3iQhdrbJKOj42G8ZNhxIJtQxnSHxeXtrCvE9jG7-Exae25dWAWyyRLOtkPSqEmDJDrqstwP4Y3j5-uZSo8YndrtC1UqreQ5BfU',
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuAmsuFv3uLgPKPzHKnEhiAGn3ypjDuDPJR-izV-_NlQzGDyi-xy715-S4LJJPPMU-8LWb4KG2K-Kn3lgN6t6TFsTE8kdAL607_YQ3hj687nOQ_8hC7vbGf3Llh260TdAS6ViV2XLxdFC9Xl3FDJX5Q1FRhz-adWKGLYm4P0XBUTjhv1VCkwStj0hbE5o4HJQbZWTAmm6pOvez7NwziBtLTxrra-3maEDaRu003YpzXU4Ekdt8RY7pBdpZe4oopiPM4AO3SmtzU9nDw',
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuBTBonppyeAge-WqOTAg00qf-EMjDtaCZPpknYbN-hX1UrPPSZTeDDyUW_plT3mQzV1n5DSmwqmE4Ql3ECJl24i9yQVpW5dxB-WPc2DF8CKHp287Px9OMcW27CZfKKPmsJJJlnIq1vdbpdn734Dz6QAifAyB8H9jvGZD_nJgMDD2g2igz9zxBamTzsyIZpOvcxV1ylmA_gr0h2GlAf08lQwcz7Jxl82enr8OwLcUB5ZCCa_cp3fI-ecCcmsx3_sH-XkMLa0UyD5oNM'
+            `https://picsum.photos/seed/${property.id}1/800/600`,
+            `https://picsum.photos/seed/${property.id}2/800/600`,
+            `https://picsum.photos/seed/${property.id}3/800/600`
           ]} />
         </div>
 
@@ -1288,19 +1331,19 @@ const PropertyDetailsScreen = ({ onSelect }: { onSelect: (v: View) => void }) =>
           >
             <div className="flex justify-between items-start mb-4">
               <div>
-                <h2 className="text-3xl font-black text-brand-dark mb-1">برج بيان</h2>
+                <h2 className="text-3xl font-black text-brand-dark mb-1">{property.name}</h2>
                 <div className="flex items-center text-slate-500 text-sm">
                   <Icon name="location_on" className="text-primary text-[18px] ml-1" />
-                  <span className="font-medium">شارع الملك فهد، الرياض، السعودية</span>
+                  <span className="font-medium">{property.location}</span>
                 </div>
               </div>
-              <div className="bg-primary/10 px-4 py-1.5 rounded-full border border-primary/20 text-primary font-black text-xs uppercase tracking-wider">سكني تجاري</div>
+              <div className="bg-primary/10 px-4 py-1.5 rounded-full border border-primary/20 text-primary font-black text-xs uppercase tracking-wider">{property.type}</div>
             </div>
             
             <div className="grid grid-cols-3 gap-4 pt-4 border-t border-slate-50">
               <div className="text-center">
                 <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">إجمالي الوحدات</p>
-                <p className="text-xl font-black text-brand-dark">٤٨</p>
+                <p className="text-xl font-black text-brand-dark">{toArabicDigits(property.units)}</p>
               </div>
               <div className="text-center border-x border-slate-100">
                 <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">الوحدات الشاغرة</p>
@@ -1827,6 +1870,7 @@ const ReportsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
           <h3 className="text-sm font-bold text-gray-400 px-1">التقارير المالية</h3>
           <div className="grid grid-cols-1 gap-3">
             {[
+              { title: 'تقرير الصك والوحدة العقارية', icon: 'description', view: 'property_report', color: 'text-blue-600', bg: 'bg-blue-50' },
               { title: 'التقرير المالي السنوي', icon: 'payments', view: 'financial_report', color: 'text-brand-dark', bg: 'bg-brand-dark/5' },
               { title: 'إقرارات الزكاة والضريبة', icon: 'account_balance', view: 'zakat_tax', color: 'text-primary-dark', bg: 'bg-primary/10' },
             ].map((item, i) => (
@@ -2286,7 +2330,21 @@ const NotificationsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
 
 const ReportLayout = ({ children, title, onBack }: { children: React.ReactNode, title: string, onBack: () => void }) => {
   const handlePrint = () => {
-    window.print();
+    try {
+      window.print();
+    } catch (e) {
+      console.error("Print failed", e);
+      // Fallback for some environments
+      const printContent = document.querySelector('main')?.innerHTML;
+      if (printContent) {
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(`<html><head><title>${title}</title></head><body>${printContent}</body></html>`);
+          printWindow.document.close();
+          printWindow.print();
+        }
+      }
+    }
   };
 
   return (
@@ -2296,6 +2354,15 @@ const ReportLayout = ({ children, title, onBack }: { children: React.ReactNode, 
           <Icon name="arrow_forward" className="text-2xl" />
         </button>
         <h2 className="text-lg font-bold flex-1 text-center pr-12">{title}</h2>
+        <div className="flex gap-2">
+          <button 
+            onClick={handlePrint}
+            className="p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary/20 transition-colors"
+            title="طباعة التقرير"
+          >
+            <Icon name="print" />
+          </button>
+        </div>
       </header>
 
       {/* Print Header */}
@@ -2532,6 +2599,42 @@ const DeveloperCenterScreen = ({ onSelect }: { onSelect: (v: View) => void }) =>
             <Icon name="content_copy" className="text-slate-500 text-sm cursor-pointer" />
           </div>
         </div>
+
+        {/* تكامل الواتساب */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold">تكامل الواتساب</h3>
+            <span className="flex items-center gap-1 text-[10px] font-bold text-green-500 bg-green-50 px-2 py-0.5 rounded-full">
+              <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+              متصل
+            </span>
+          </div>
+          
+          <div className="space-y-3">
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+              <p className="text-[10px] text-slate-400 mb-1">عنوان الاستدعاء (Callback URL)</p>
+              <div className="flex items-center justify-between gap-2">
+                <code className="text-[10px] font-mono text-slate-600 truncate">https://api.example.com/webhooks/whatsapp</code>
+                <Icon name="content_copy" className="text-slate-400 text-sm cursor-pointer shrink-0" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <p className="text-[10px] text-slate-400 mb-1">رقم الربط</p>
+                <p className="text-xs font-bold text-slate-700">+966 50 123 4567</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <p className="text-[10px] text-slate-400 mb-1">آخر مزامنة</p>
+                <p className="text-xs font-bold text-slate-700">منذ دقيقتين</p>
+              </div>
+            </div>
+          </div>
+
+          <button className="w-full py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-colors">
+            إعدادات Webhooks
+          </button>
+        </div>
         <div className="space-y-3">
           <h3 className="font-bold">سجل الطلبات (Webhooks)</h3>
           {[
@@ -2654,9 +2757,9 @@ const VendorsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) 
       <main className="p-4 space-y-4">
         <div className="grid grid-cols-1 gap-3">
           {[
-            { name: 'شركة التكييف المتقدمة', service: 'صيانة تكييف', rating: 4.8, status: 'available' },
-            { name: 'الكهربائي المتميز', service: 'أعمال كهرباء', rating: 4.5, status: 'busy' },
-            { name: 'سباكة الخليج', service: 'سباكة وعزل', rating: 4.2, status: 'available' },
+            { name: 'شركة التكييف المتقدمة', service: 'صيانة تكييف', rating: 4.8, status: 'available', phone: '966500000001' },
+            { name: 'الكهربائي المتميز', service: 'أعمال كهرباء', rating: 4.5, status: 'busy', phone: '966500000002' },
+            { name: 'سباكة الخليج', service: 'سباكة وعزل', rating: 4.2, status: 'available', phone: '966500000003' },
           ].map((vendor, i) => (
             <div key={i} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -2672,11 +2775,22 @@ const VendorsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) 
                   </div>
                 </div>
               </div>
-              <div className="text-left">
+              <div className="flex flex-col items-end gap-2">
                 <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${vendor.status === 'available' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
                   {vendor.status === 'available' ? 'متاح' : 'مشغول'}
                 </span>
-                <button className="block text-[10px] text-primary font-bold mt-2">طلب خدمة</button>
+                <div className="flex items-center gap-2">
+                  <a 
+                    href={`https://wa.me/${vendor.phone}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                    title="تواصل عبر واتساب"
+                  >
+                    <Icon name="chat" className="text-sm" />
+                  </a>
+                  <button className="text-[10px] text-primary font-bold px-3 py-1.5 bg-primary/5 rounded-lg">طلب خدمة</button>
+                </div>
               </div>
             </div>
           ))}
@@ -2724,19 +2838,550 @@ const AssetManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) =>
   );
 };
 
+const OfficialPrintScreen = ({ onSelect, property }: { onSelect: (v: View) => void, property: any }) => {
+  const [showNotice, setShowNotice] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowNotice(false), 5000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-slate-100 py-10 px-4 print:p-0 print:bg-white">
+      <AnimatePresence>
+        {showNotice && (
+          <motion.div 
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
+            className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] bg-brand-dark text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/10 print:hidden"
+          >
+            <div className="size-8 bg-brand-yellow text-brand-dark rounded-full flex items-center justify-center">
+              <Icon name="info" />
+            </div>
+            <p className="text-sm font-bold">يمكنك حفظ التقرير كملف PDF عبر خيار الطباعة</p>
+            <button onClick={() => setShowNotice(false)} className="text-white/50 hover:text-white">
+              <Icon name="close" className="text-sm" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Control Panel - Hidden during print */}
+      <div className="max-w-4xl mx-auto mb-6 flex justify-between items-center print:hidden">
+        <button 
+          onClick={() => onSelect('property_report')}
+          className="flex items-center gap-2 text-slate-600 hover:text-primary transition-colors"
+        >
+          <Icon name="arrow_forward" />
+          <span>العودة للتقرير</span>
+        </button>
+        <div className="flex gap-3">
+          <button 
+            onClick={() => window.print()}
+            className="bg-brand-dark text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-xl hover:bg-brand-dark/90 transition-all border border-white/10"
+          >
+            <Icon name="download" className="text-primary" />
+            تصدير PDF
+          </button>
+          <button 
+            onClick={() => window.print()}
+            className="bg-brand-yellow text-brand-dark px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-xl hover:bg-brand-yellow/90 transition-all"
+          >
+            <Icon name="print" />
+            طباعة التقرير
+          </button>
+        </div>
+      </div>
+
+      {/* A4 Paper Container */}
+      <div className="max-w-[210mm] mx-auto bg-white shadow-2xl print:shadow-none print:m-0 flex flex-col min-h-[297mm] relative overflow-hidden">
+        
+        {/* Header Branding */}
+        <div className="p-10 flex justify-between items-start border-b-4 border-brand-yellow">
+          <div className="text-right space-y-1">
+            <h1 className="text-3xl font-black text-brand-dark">تقرير عقاري رسمي</h1>
+            <p className="text-slate-500 font-bold">شركة رمز الإبداع لإدارة الأملاك</p>
+            <div className="mt-6 text-xs text-slate-400 space-y-1">
+              <p>رقم المرجع: <span className="font-mono text-slate-700">REF-{property.id}-{new Date().getFullYear()}</span></p>
+              <p>تاريخ الإصدار: <span className="text-slate-700">{new Date().toLocaleDateString('ar-SA')}</span></p>
+            </div>
+          </div>
+          <div className="flex flex-col items-center">
+             <div className="size-20 gold-gradient rounded-2xl flex items-center justify-center text-brand-dark mb-2">
+                <Icon name="domain" className="text-4xl" />
+             </div>
+             <span className="text-xs font-black text-brand-dark">رمز الإبداع</span>
+          </div>
+        </div>
+
+        {/* Main Content Area */}
+        <div className="flex-1 px-12 py-10 space-y-8">
+          <section className="space-y-4">
+            <h2 className="text-lg font-bold bg-slate-50 p-3 rounded-lg border-r-4 border-brand-yellow flex items-center gap-2">
+              <Icon name="info" className="text-brand-yellow" />
+              بيانات العقار الأساسية
+            </h2>
+            <div className="grid grid-cols-2 gap-6 text-sm">
+              <div className="space-y-3">
+                <div className="flex justify-between border-b border-slate-100 pb-2">
+                  <span className="text-slate-400">اسم العقار:</span>
+                  <span className="font-bold">{property.name}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-100 pb-2">
+                  <span className="text-slate-400">المدينة / الحي:</span>
+                  <span className="font-bold">{property.location}</span>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="flex justify-between border-b border-slate-100 pb-2">
+                  <span className="text-slate-400">رقم الصك:</span>
+                  <span className="font-bold font-mono">9203847561</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-100 pb-2">
+                  <span className="text-slate-400">المساحة الإجمالية:</span>
+                  <span className="font-bold">١,٢٥٠ م٢</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="space-y-4">
+            <h2 className="text-lg font-bold bg-slate-50 p-3 rounded-lg border-r-4 border-brand-yellow flex items-center gap-2">
+              <Icon name="analytics" className="text-brand-yellow" />
+              ملخص الحالة المالية والتشغيلية
+            </h2>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="p-4 rounded-xl border border-slate-100 text-center space-y-1">
+                <p className="text-[10px] text-slate-400 uppercase tracking-wider">نسبة الإشغال</p>
+                <p className="text-xl font-black text-brand-dark">٩٢٪</p>
+              </div>
+              <div className="p-4 rounded-xl border border-slate-100 text-center space-y-1">
+                <p className="text-[10px] text-slate-400 uppercase tracking-wider">الإيراد السنوي</p>
+                <p className="text-xl font-black text-brand-dark">٨٥٠,٠٠٠</p>
+              </div>
+              <div className="p-4 rounded-xl border border-slate-100 text-center space-y-1">
+                <p className="text-[10px] text-slate-400 uppercase tracking-wider">طلبات الصيانة</p>
+                <p className="text-xl font-black text-brand-dark">١٤</p>
+              </div>
+            </div>
+          </section>
+
+          <div className="flex justify-between items-end pt-20">
+            <div className="text-center space-y-6">
+              <p className="text-sm font-bold text-slate-600">ختم الشركة</p>
+              <div className="w-24 h-24 rounded-full border-4 border-brand-yellow/20 flex items-center justify-center opacity-30 rotate-12">
+                <Icon name="verified_user" className="text-5xl text-brand-yellow" />
+              </div>
+            </div>
+            <div className="text-center space-y-2">
+              <p className="text-sm font-bold text-slate-600">توقيع مدير الأملاك</p>
+              <div className="w-40 h-px bg-slate-300 mt-12"></div>
+              <p className="text-xs text-slate-400">أ. محمد العتيبي</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Branding */}
+        <div className="mt-auto">
+          <div className="bg-brand-dark p-8 flex justify-between items-center text-white">
+            <div className="flex gap-8 text-[10px]">
+              <div className="flex items-center gap-2">
+                <Icon name="call" className="text-brand-yellow" />
+                <span>920013517</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Icon name="mail" className="text-brand-yellow" />
+                <span>info@ramzabdae.com</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Icon name="language" className="text-brand-yellow" />
+                <span>www.ramzabdae.com</span>
+              </div>
+            </div>
+            <div className="flex gap-1">
+              <div className="w-3 h-8 bg-brand-yellow skew-x-[-20deg]"></div>
+              <div className="w-3 h-8 bg-white/20 skew-x-[-20deg]"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const PropertyReportScreen = ({ onSelect, property }: { onSelect: (v: View) => void, property: any }) => {
+  const [isSelectorOpen, setIsSelectorOpen] = useState(false);
+
+  return (
+    <ReportLayout title={`تقرير ${property.name}`} onBack={() => onSelect('property_details')}>
+      {/* Property Selector - Hidden during print */}
+      <div className="mb-6 print:hidden">
+        <button 
+          onClick={() => setIsSelectorOpen(!isSelectorOpen)}
+          className="w-full bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between hover:border-primary transition-all"
+        >
+          <div className="flex items-center gap-3">
+            <div className="size-10 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
+              <Icon name="apartment" />
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] text-slate-400 font-bold uppercase">العقار المختار</p>
+              <p className="text-sm font-black text-brand-dark">{property.name}</p>
+            </div>
+          </div>
+          <Icon name={isSelectorOpen ? "expand_less" : "expand_more"} className="text-slate-400" />
+        </button>
+
+        <AnimatePresence>
+          {isSelectorOpen && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden mt-2 bg-white rounded-2xl shadow-xl border border-slate-100"
+            >
+              <div className="p-2 max-h-60 overflow-y-auto">
+                {PROPERTIES.map((p) => (
+                  <button 
+                    key={p.id}
+                    onClick={() => {
+                      // We need a way to update the selected property in App state
+                      // For now, we'll just use the onSelect with a custom view or handle it in App
+                      // Actually, let's update App.tsx to handle this
+                      (window as any).selectProperty(p);
+                      setIsSelectorOpen(false);
+                    }}
+                    className={cn(
+                      "w-full p-3 rounded-xl text-right flex items-center justify-between hover:bg-slate-50 transition-colors",
+                      p.id === property.id ? "bg-primary/5 text-primary" : "text-slate-600"
+                    )}
+                  >
+                    <span className="text-sm font-bold">{p.name}</span>
+                    {p.id === property.id && <Icon name="check" className="text-sm" />}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      <div className="fixed bottom-24 left-6 z-50 print:hidden flex flex-col gap-3">
+        <button 
+          onClick={() => window.print()}
+          className="size-14 bg-brand-dark text-primary rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform"
+          title="طباعة سريعة"
+        >
+          <Icon name="print" className="text-2xl" />
+        </button>
+        <button 
+          onClick={() => onSelect('official_print')}
+          className="size-14 bg-brand-yellow text-brand-dark rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform"
+          title="نسخة الطباعة الرسمية"
+        >
+          <Icon name="description" className="text-2xl" />
+        </button>
+      </div>
+      <div className="space-y-8">
+        {/* الغلاف (ورق رسمي) */}
+        <div className="print:h-[297mm] flex flex-col items-center justify-center text-center p-12 bg-white border border-slate-100 rounded-3xl print:border-none">
+          <Logo className="size-48 mb-8" />
+          <h1 className="text-4xl font-black text-brand-dark mb-4">تقرير {property.name}</h1>
+          <p className="text-xl text-slate-500 mb-12">تجميع البيانات الرسمية والوحدات العقارية والمستأجرين والوسطاء العقاريين</p>
+          <div className="w-32 h-1 gold-gradient rounded-full mb-12"></div>
+          <p className="text-lg font-bold text-primary">{property.location}</p>
+          <div className="mt-auto pt-12 hidden print:block">
+            <p className="text-sm text-slate-400">تُترك هذه الصفحة فارغة لاحتواء الورق الرسمي المرسل</p>
+          </div>
+        </div>
+
+        {/* بيانات الصك والسجل العيني */}
+        <section className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 break-inside-avoid">
+          <div className="flex items-center gap-3 mb-6 border-b border-slate-50 pb-4">
+            <div className="size-10 gold-gradient rounded-xl flex items-center justify-center text-brand-dark">
+              <Icon name="description" />
+            </div>
+            <h3 className="text-xl font-black text-brand-dark">بيانات الصك والسجل العيني</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[
+              { label: 'رقم الصك', value: '١٢٣٤٥٦٧٨٩٠' },
+              { label: 'تاريخ الإصدار', value: '١٤٤٥/٠٥/١٠ هـ' },
+              { label: 'جهة الإصدار', value: 'كتابة العدل الأولى بالرياض' },
+              { label: 'رقم المستند', value: '٩٨٧٦٥٤' },
+              { label: 'رقم القطعة', value: '١٥' },
+              { label: 'رقم المخطط', value: '٣٠٢٠' },
+              { label: 'مساحة الصك', value: '٥٠٠ م٢' },
+              { label: 'نوع الصك', value: 'إلكتروني' },
+            ].map((item, i) => (
+              <div key={i} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                <span className="text-sm font-bold text-slate-500">{item.label}:</span>
+                <span className="text-sm font-black text-brand-dark">{item.value}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* بيانات العقار */}
+        <section className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 break-inside-avoid">
+          <div className="flex items-center gap-3 mb-6 border-b border-slate-50 pb-4">
+            <div className="size-10 gold-gradient rounded-xl flex items-center justify-center text-brand-dark">
+              <Icon name="apartment" />
+            </div>
+            <h3 className="text-xl font-black text-brand-dark">بيانات العقار</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[
+              { label: 'المنطقة', value: 'الرياض' },
+              { label: 'المدينة', value: 'الرياض' },
+              { label: 'الحي', value: 'حي الصحافة' },
+              { label: 'العنوان الوطني', value: '١٢٣٤ الرياض ٥٦٧٨' },
+              { label: 'نوع المبنى', value: 'برج سكني تجاري' },
+              { label: 'الغرض من الاستخدام', value: 'سكني وتجاري' },
+              { label: 'عدد الطوابق', value: '١٢ طابق' },
+              { label: 'عدد الوحدات', value: '٤٨ وحدة' },
+              { label: 'عدد المصاعد', value: '٣ مصاعد' },
+              { label: 'عدد المواقف', value: '٦٠ موقف' },
+            ].map((item, i) => (
+              <div key={i} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                <span className="text-sm font-bold text-slate-500">{item.label}:</span>
+                <span className="text-sm font-black text-brand-dark">{item.value}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6">
+            <h4 className="text-sm font-bold text-slate-400 mb-3 uppercase tracking-widest">المرافق والخدمات</h4>
+            <div className="flex flex-wrap gap-2">
+              {['مسبح أولمبي', 'نادي رياضي متكامل', 'منطقة ألعاب أطفال', 'حراسة أمنية ٢٤/٧'].map((service, i) => (
+                <div key={i} className="flex items-center gap-2 px-4 py-2 bg-primary/5 text-primary rounded-full text-xs font-bold border border-primary/10">
+                  <Icon name="check_circle" className="text-sm" />
+                  {service}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* بيانات الوحدة العقارية */}
+        <section className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 break-inside-avoid">
+          <div className="flex items-center gap-3 mb-6 border-b border-slate-50 pb-4">
+            <div className="size-10 gold-gradient rounded-xl flex items-center justify-center text-brand-dark">
+              <Icon name="door_front" />
+            </div>
+            <h3 className="text-xl font-black text-brand-dark">بيانات الوحدة العقارية</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[
+              { label: 'نوع الوحدة', value: 'شقة سكنية' },
+              { label: 'رقم الوحدة', value: '٥٠٢' },
+              { label: 'رقم الطابق', value: 'الخامس' },
+              { label: 'المساحة', value: '١٨٠ م٢' },
+              { label: 'حالة التأثيث', value: 'غير مؤثث' },
+              { label: 'خزائن مطبخ مركبة', value: 'نعم' },
+              { label: 'عدد وحدات التكييف', value: 'عدد (١) مركزي + (٤) سبليت' },
+            ].map((item, i) => (
+              <div key={i} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                <span className="text-sm font-bold text-slate-500">{item.label}:</span>
+                <span className="text-sm font-black text-brand-dark">{item.value}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6">
+            <h4 className="text-sm font-bold text-slate-400 mb-3 uppercase tracking-widest">تفاصيل الغرف</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {[
+                { label: 'صالة', value: '١' },
+                { label: 'مطبخ', value: '١' },
+                { label: 'غرف نوم', value: '٣' },
+                { label: 'عداد الكهرباء', value: 'مستقل' },
+              ].map((room, i) => (
+                <div key={i} className="p-4 bg-slate-50 rounded-2xl text-center">
+                  <p className="text-[10px] font-bold text-slate-400 mb-1">{room.label}</p>
+                  <p className="text-lg font-black text-brand-dark">{room.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* بيانات المالك واتحاد الملاك */}
+        <section className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 break-inside-avoid">
+          <div className="flex items-center gap-3 mb-6 border-b border-slate-50 pb-4">
+            <div className="size-10 gold-gradient rounded-xl flex items-center justify-center text-brand-dark">
+              <Icon name="person" />
+            </div>
+            <h3 className="text-xl font-black text-brand-dark">بيانات المالك واتحاد الملاك</h3>
+          </div>
+          <div className="space-y-6">
+            <div>
+              <h4 className="text-sm font-bold text-primary mb-3">معلومات المالك</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  { label: 'الاسم', value: 'عبد الرحمن السديري' },
+                  { label: 'رقم الهوية', value: '١٠٢٣٤٥٦٧٨٩' },
+                  { label: 'الجنسية', value: 'سعودي' },
+                  { label: 'نسبة الملكية', value: '١٠٠٪' },
+                  { label: 'مساحة الملكية', value: '٥٠٠ م٢' },
+                  { label: 'نوع المالك', value: 'فرد' },
+                ].map((item, i) => (
+                  <div key={i} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                    <span className="text-xs font-bold text-slate-500">{item.label}:</span>
+                    <span className="text-xs font-black text-brand-dark">{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="pt-6 border-t border-slate-50">
+              <h4 className="text-sm font-bold text-primary mb-3">بيانات اتحاد الملاك</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  { label: 'اسم الجمعية', value: 'جمعية ملاك برج بيان' },
+                  { label: 'رقم التسجيل', value: '٧٧٦٦٥٥' },
+                  { label: 'الرقم الموحد', value: '٧٠٠١٢٣٤٥٦٧' },
+                  { label: 'تاريخ السريان', value: '١٤٤٥/٠١/٠١ هـ' },
+                  { label: 'تاريخ الانتهاء', value: '١٤٤٦/٠١/٠١ هـ' },
+                  { label: 'حالة الجمعية', value: 'نشطة' },
+                ].map((item, i) => (
+                  <div key={i} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                    <span className="text-xs font-bold text-slate-500">{item.label}:</span>
+                    <span className="text-xs font-black text-brand-dark">{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="pt-6 border-t border-slate-50">
+              <h4 className="text-sm font-bold text-primary mb-3">نتائج التصويت والرسوم</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {[
+                  { label: 'إجمالي الرسوم', value: '٢,٥٠٠ ر.س' },
+                  { label: 'عدد المصوتين', value: '٤٠' },
+                  { label: 'نسبة القبول', value: '٩٥٪' },
+                  { label: 'غير المصوتين', value: '٨' },
+                ].map((item, i) => (
+                  <div key={i} className="p-4 bg-slate-50 rounded-2xl text-center border border-slate-100">
+                    <p className="text-[10px] font-bold text-slate-400 mb-1">{item.label}</p>
+                    <p className="text-sm font-black text-brand-dark">{item.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* بيانات عقد الإيجار */}
+        <section className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 break-inside-avoid">
+          <div className="flex items-center gap-3 mb-6 border-b border-slate-50 pb-4">
+            <div className="size-10 gold-gradient rounded-xl flex items-center justify-center text-brand-dark">
+              <Icon name="history_edu" />
+            </div>
+            <h3 className="text-xl font-black text-brand-dark">بيانات عقد الإيجار</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[
+              { label: 'رقم العقد', value: '٢٠٢٤-٩٩٨٨٧٧' },
+              { label: 'نوع العقد', value: 'سكني موحد' },
+              { label: 'تاريخ الإبرام', value: '٢٠٢٤/٠١/٠١' },
+              { label: 'بداية الإيجار', value: '٢٠٢٤/٠١/٠١' },
+              { label: 'نهاية الإيجار', value: '٢٠٢٤/١٢/٣١' },
+              { label: 'مدة العقد', value: 'سنة واحدة' },
+              { label: 'قيمة الإيجار السنوي', value: '٥٥,٠٠٠ ر.س' },
+              { label: 'عدد الدفعات', value: '٤ دفعات' },
+              { label: 'قنوات الدفع', value: 'مدى / سداد' },
+            ].map((item, i) => (
+              <div key={i} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                <span className="text-sm font-bold text-slate-500">{item.label}:</span>
+                <span className="text-sm font-black text-brand-dark">{item.value}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* بيانات المستأجر والوسيط العقاري */}
+        <section className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 break-inside-avoid">
+          <div className="flex items-center gap-3 mb-6 border-b border-slate-50 pb-4">
+            <div className="size-10 gold-gradient rounded-xl flex items-center justify-center text-brand-dark">
+              <Icon name="badge" />
+            </div>
+            <h3 className="text-xl font-black text-brand-dark">بيانات المستأجر والوسيط العقاري</h3>
+          </div>
+          <div className="space-y-6">
+            <div>
+              <h4 className="text-sm font-bold text-primary mb-3">معلومات المستأجر</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  { label: 'الاسم', value: 'محمد العتيبي' },
+                  { label: 'الجنسية', value: 'سعودي' },
+                  { label: 'نوع الهوية', value: 'هوية وطنية' },
+                  { label: 'رقم الهوية', value: '١٠٩٨٧٦٥٤٣٢' },
+                  { label: 'رقم الجوال', value: '٠٥٠٩٩٨٨٧٧٦' },
+                  { label: 'البريد الإلكتروني', value: 'm.otaibi@email.com' },
+                ].map((item, i) => (
+                  <div key={i} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                    <span className="text-xs font-bold text-slate-500">{item.label}:</span>
+                    <span className="text-xs font-black text-brand-dark">{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="pt-6 border-t border-slate-50">
+              <h4 className="text-sm font-bold text-primary mb-3">بيانات الوسيط العقاري</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  { label: 'اسم المنشأة', value: 'شركة رمز الإبداع لإدارة الأملاك' },
+                  { label: 'السجل التجاري', value: '١٠١٠٩٩٨٨٧٧' },
+                ].map((item, i) => (
+                  <div key={i} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                    <span className="text-xs font-bold text-slate-500">{item.label}:</span>
+                    <span className="text-xs font-black text-brand-dark">{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ملاحظات إضافية */}
+        <section className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 break-inside-avoid">
+          <div className="flex items-center gap-3 mb-6 border-b border-slate-50 pb-4">
+            <div className="size-10 gold-gradient rounded-xl flex items-center justify-center text-brand-dark">
+              <Icon name="notes" />
+            </div>
+            <h3 className="text-xl font-black text-brand-dark">ملاحظات إضافية</h3>
+          </div>
+          <div className="p-6 bg-slate-50 rounded-2xl min-h-[150px] text-sm text-slate-600 leading-relaxed">
+            لا توجد ملاحظات إضافية على هذا العقار في الوقت الحالي. يتم تحديث هذا القسم دورياً بناءً على تقارير الفحص الميداني.
+          </div>
+        </section>
+      </div>
+    </ReportLayout>
+  );
+};
+
 // --- Main App ---
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('welcome');
+  const [selectedProperty, setSelectedProperty] = useState(PROPERTIES[0]);
+
+  const handleSelectProperty = (view: View, property: any) => {
+    setSelectedProperty(property);
+    setCurrentView(view);
+  };
+
+  useEffect(() => {
+    (window as any).selectProperty = (p: any) => setSelectedProperty(p);
+    return () => { delete (window as any).selectProperty; };
+  }, []);
 
   const renderView = () => {
     switch (currentView) {
       case 'welcome': return <WelcomeScreen onSelect={setCurrentView} />;
-      case 'manager_dashboard': return <ManagerDashboard onSelect={setCurrentView} />;
+      case 'manager_dashboard': return <ManagerDashboard onSelect={setCurrentView} onSelectProperty={handleSelectProperty} />;
       case 'accounting': return <AccountingScreen onSelect={setCurrentView} />;
       case 'invoices': return <InvoicesScreen onSelect={setCurrentView} />;
       case 'maintenance': return <MaintenanceScreen onSelect={setCurrentView} />;
-      case 'property_details': return <PropertyDetailsScreen onSelect={setCurrentView} />;
+      case 'property_details': return <PropertyDetailsScreen onSelect={setCurrentView} property={selectedProperty} />;
       case 'new_maintenance': return <NewMaintenanceRequestScreen onSelect={setCurrentView} />;
       case 'tenant_dashboard': return <TenantDashboard onSelect={setCurrentView} />;
       case 'settings': return <SettingsScreen onSelect={setCurrentView} />;
@@ -2749,6 +3394,8 @@ export default function App() {
       case 'docs': return <TechnicalDocsScreen onSelect={setCurrentView} />;
       case 'notifications': return <NotificationsScreen onSelect={setCurrentView} />;
       case 'financial_report': return <FinancialReportScreen onSelect={setCurrentView} />;
+      case 'property_report': return <PropertyReportScreen onSelect={setCurrentView} property={selectedProperty} />;
+      case 'official_print': return <OfficialPrintScreen onSelect={setCurrentView} property={selectedProperty} />;
       case 'zakat_tax': return <ZakatTaxScreen onSelect={setCurrentView} />;
       case 'ejar_integration': return <EjarIntegrationScreen onSelect={setCurrentView} />;
       case 'tech_performance': return <TechPerformanceScreen onSelect={setCurrentView} />;
