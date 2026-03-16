@@ -725,9 +725,11 @@ const ManagerDashboard = ({ onSelect, onSelectProperty }: { onSelect: (v: View) 
               { label: 'الملاك', icon: 'real_estate_agent', bg: 'bg-emerald-50', color: 'text-emerald-600', badge: toArabicDigits(OWNERS.length), view: 'owners' },
               { label: 'العقود', icon: 'history_edu', bg: 'bg-amber-50', color: 'text-amber-600', badge: toArabicDigits(CONTRACTS.length), view: 'contracts' },
               { label: 'الوحدات', icon: 'door_front', bg: 'bg-violet-50', color: 'text-violet-600', badge: toArabicDigits(UNITS.length), view: 'units' },
-              { label: 'الموردون', icon: 'engineering', bg: 'bg-orange-50', color: 'text-orange-600', badge: '٣', view: 'vendors_management' },
+              { label: 'الموردون', icon: 'engineering', bg: 'bg-orange-50', color: 'text-orange-600', badge: toArabicDigits(VENDORS.length), view: 'vendors_management' },
               { label: 'الأصول', icon: 'inventory', bg: 'bg-rose-50', color: 'text-rose-600', badge: '٤', view: 'asset_management' },
               { label: 'التقارير', icon: 'bar_chart', bg: 'bg-sky-50', color: 'text-sky-600', badge: toArabicDigits(10), view: 'reports' },
+              { label: 'قوالب الرسائل', icon: 'mark_email_unread', bg: 'bg-indigo-50', color: 'text-indigo-600', badge: toArabicDigits(MSG_TEMPLATES.length), view: 'msg_templates' },
+              { label: 'نماذج العقارات', icon: 'description', bg: 'bg-pink-50', color: 'text-pink-600', badge: toArabicDigits(PROPERTY_FORMS.length), view: 'property_forms' },
             ].map((item, i) => (
               <motion.button
                 key={i}
@@ -1736,7 +1738,7 @@ const NewMaintenanceRequestScreen = ({ onSelect }: { onSelect: (v: View) => void
   );
 };
 
-const TenantDashboard = ({ onSelect }: { onSelect: (v: View) => void }) => {
+const TenantDashboard = ({ onSelect, onNavigateForms }: { onSelect: (v: View) => void; onNavigateForms?: (cat: string) => void }) => {
   return (
     <div className="min-h-screen bg-[#f8f8f5] pb-24">
       <header className="bg-white border-b border-slate-200 p-4 sticky top-0 z-50">
@@ -1789,12 +1791,21 @@ const TenantDashboard = ({ onSelect }: { onSelect: (v: View) => void }) => {
               { label: 'دفع الإيجار', icon: 'payments', view: 'payment' },
               { label: 'طلب صيانة', icon: 'construction', view: 'new_maintenance' },
               { label: 'تواصل معنا', icon: 'support_agent', view: 'support' },
+               { label: 'نماذج الإخلاء', icon: 'description', view: 'property_forms', formsCategory: 'عقارات' },
+               { label: 'الشكاوى', icon: 'feedback', view: 'property_forms', formsCategory: 'خدمات' },
+               { label: 'الإشعارات', icon: 'notifications', view: 'notifications', formsCategory: '' },
             ].map((act, i) => (
               <motion.button 
                 key={i} 
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => act.view && onSelect(act.view as View)}
+                onClick={() => {
+                  if (act.formsCategory && act.view === 'property_forms' && onNavigateForms) {
+                    onNavigateForms(act.formsCategory);
+                  } else if (act.view) {
+                    onSelect(act.view as View);
+                  }
+                }}
                 className="flex flex-col items-center justify-center gap-2 p-3 bg-white rounded-xl border border-slate-200 hover:border-primary transition-colors shadow-sm"
               >
                 <div className="size-10 bg-primary/20 text-primary rounded-lg flex items-center justify-center"><Icon name={act.icon} /></div>
@@ -2330,6 +2341,8 @@ const AddPropertyScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
 };
 
 const OwnersManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const [quickSendOwner, setQuickSendOwner] = useState<typeof OWNERS[0] | null>(null);
+  const [ownerSendDone, setOwnerSendDone] = useState(false);
   return (
     <div className="min-h-screen bg-[#f8f8f5] pb-24">
       <header className="flex items-center justify-between p-4 bg-white sticky top-0 z-10 shadow-sm border-b border-primary/10">
@@ -2390,9 +2403,86 @@ const OwnersManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) =
                 <span>{owner.email}</span>
               </div>
             </div>
+            <button
+              onClick={() => { setQuickSendOwner(owner); setOwnerSendDone(false); }}
+              className="mt-3 w-full text-emerald-600 text-xs font-bold flex items-center justify-center gap-1.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 transition-colors"
+            >
+              <Icon name="send" className="text-xs" /> إرسال تقرير للمالك
+            </button>
           </motion.div>
         ))}
       </main>
+
+      {/* Quick Send Modal */}
+      <AnimatePresence>
+        {quickSendOwner && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center p-4"
+            onClick={() => { if (!ownerSendDone) setQuickSendOwner(null); }}
+          >
+            <motion.div
+              initial={{ y: 60, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 60, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white rounded-3xl w-full max-w-lg p-6 shadow-2xl"
+            >
+              {ownerSendDone ? (
+                <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="flex flex-col items-center py-6 text-center">
+                  <div className="size-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-3">
+                    <Icon name="check_circle" className="text-4xl" />
+                  </div>
+                  <h3 className="text-lg font-black text-brand-dark">تم الإرسال!</h3>
+                  <p className="text-xs text-slate-400 mt-1">تم إرسال الرسالة إلى {quickSendOwner.name}</p>
+                </motion.div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="size-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
+                      <Icon name="real_estate_agent" className="text-lg" />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-brand-dark">{quickSendOwner.name}</h3>
+                      <p className="text-[10px] text-slate-400">{toArabicDigits(quickSendOwner.properties)} عقار • {quickSendOwner.email}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs font-bold text-slate-500 mb-3">اختر القالب المناسب للمالك:</p>
+                  <div className="space-y-2 max-h-64 overflow-y-auto mb-4">
+                    {MSG_TEMPLATES.filter(t => t.recipient === 'مالك').map(tmpl => (
+                      <button
+                        key={tmpl.id}
+                        onClick={() => { setOwnerSendDone(true); setTimeout(() => setQuickSendOwner(null), 1600); }}
+                        className={cn("w-full text-right p-3 rounded-xl border flex items-start gap-3 transition-all hover:border-emerald-300 hover:bg-emerald-50", tmpl.bg, "border-transparent")}
+                      >
+                        <div className={cn("size-8 rounded-lg flex items-center justify-center shrink-0 bg-white/60", tmpl.color)}>
+                          <Icon name={tmpl.icon} className="text-sm" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <p className="text-xs font-black text-brand-dark">{tmpl.title}</p>
+                            {tmpl.auto && <span className="text-[8px] font-black bg-primary/10 text-primary px-1.5 py-0.5 rounded-full shrink-0">آلي</span>}
+                          </div>
+                          <p className="text-[10px] text-slate-400 font-bold">{tmpl.category}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setQuickSendOwner(null)}
+                    className="w-full py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-colors"
+                  >
+                    إلغاء
+                  </button>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <BottomNav active="manager_dashboard" onSelect={onSelect} />
     </div>
   );
@@ -2466,6 +2556,8 @@ const UnitsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) =>
 
 const ContractsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
   const [activeFilter, setActiveFilter] = useState('الكل');
+  const [quickSendContract, setQuickSendContract] = useState<typeof CONTRACTS[0] | null>(null);
+  const [quickSendDone, setQuickSendDone] = useState(false);
   const filters = ['الكل', 'ساري', 'ينتهي قريباً', 'منتهي'];
 
   const filtered = CONTRACTS.filter(c =>
@@ -2561,9 +2653,24 @@ const ContractsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }
                   <p className="text-xs font-bold text-brand-dark">{contract.end}</p>
                 </div>
               </div>
-              {contract.status !== 'منتهي' && (
-                <button className="mt-3 w-full text-primary text-xs font-bold flex items-center justify-center gap-1 py-2 rounded-xl bg-primary/5 hover:bg-primary/10 transition-colors">
-                  <Icon name="refresh" className="text-xs" /> تجديد العقد
+              {contract.status !== 'منتهي' ? (
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <button className="text-primary text-xs font-bold flex items-center justify-center gap-1 py-2 rounded-xl bg-primary/5 hover:bg-primary/10 transition-colors">
+                    <Icon name="refresh" className="text-xs" /> تجديد العقد
+                  </button>
+                  <button
+                    onClick={() => { setQuickSendContract(contract); setQuickSendDone(false); }}
+                    className="text-sky-600 text-xs font-bold flex items-center justify-center gap-1 py-2 rounded-xl bg-sky-50 hover:bg-sky-100 transition-colors"
+                  >
+                    <Icon name="send" className="text-xs" /> إرسال رسالة
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setQuickSendContract(contract); setQuickSendDone(false); }}
+                  className="mt-3 w-full text-slate-500 text-xs font-bold flex items-center justify-center gap-1 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors"
+                >
+                  <Icon name="send" className="text-xs" /> إرسال رسالة
                 </button>
               )}
             </motion.div>
@@ -2577,6 +2684,81 @@ const ContractsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }
           </div>
         )}
       </main>
+
+      {/* Quick Send Modal */}
+      <AnimatePresence>
+        {quickSendContract && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center p-4"
+            onClick={() => { if (!quickSendDone) setQuickSendContract(null); }}
+          >
+            <motion.div
+              initial={{ y: 60, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 60, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white rounded-3xl w-full max-w-lg p-6 shadow-2xl"
+            >
+              {quickSendDone ? (
+                <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="flex flex-col items-center py-6 text-center">
+                  <div className="size-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-3">
+                    <Icon name="check_circle" className="text-4xl" />
+                  </div>
+                  <h3 className="text-lg font-black text-brand-dark">تم الإرسال!</h3>
+                  <p className="text-xs text-slate-400 mt-1">تم إرسال الرسالة إلى {quickSendContract.tenant}</p>
+                </motion.div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="size-10 bg-sky-50 text-sky-600 rounded-xl flex items-center justify-center">
+                      <Icon name="send" className="text-lg" />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-brand-dark">إرسال رسالة</h3>
+                      <p className="text-[10px] text-slate-400">{quickSendContract.tenant} • {quickSendContract.unit}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs font-bold text-slate-500 mb-3">اختر القالب المناسب:</p>
+                  <div className="space-y-2 max-h-64 overflow-y-auto mb-4">
+                    {MSG_TEMPLATES.filter(t => {
+                      if (t.category !== 'عقود') return false;
+                      // Show renewal/expiry templates for active/expiring; payment reminder for all active
+                      if (quickSendContract.status === 'منتهي') return t.id === '5' || t.id === '6'; // owner reports only
+                      if (quickSendContract.status === 'ينتهي قريباً') return ['2', '3', '4', '5'].includes(t.id);
+                      return true; // ساري: show all contract templates
+                    }).map(tmpl => (
+                      <button
+                        key={tmpl.id}
+                        onClick={() => { setQuickSendDone(true); setTimeout(() => setQuickSendContract(null), 1600); }}
+                        className={cn("w-full text-right p-3 rounded-xl border flex items-start gap-3 transition-all hover:border-primary hover:bg-primary/5", tmpl.bg, "border-transparent")}
+                      >
+                        <div className={cn("size-8 rounded-lg flex items-center justify-center shrink-0 bg-white/60", tmpl.color)}>
+                          <Icon name={tmpl.icon} className="text-sm" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-black text-brand-dark">{tmpl.title}</p>
+                          <p className="text-[10px] text-slate-500 truncate">{tmpl.preview.length > 60 ? `${tmpl.preview.slice(0, 60)}...` : tmpl.preview}</p>
+                        </div>
+                        {tmpl.auto && <span className="text-[8px] font-black bg-primary/10 text-primary px-1.5 py-0.5 rounded-full shrink-0">آلي</span>}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setQuickSendContract(null)}
+                    className="w-full py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-colors"
+                  >
+                    إلغاء
+                  </button>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <BottomNav active="manager_dashboard" onSelect={onSelect} />
     </div>
   );
@@ -3829,6 +4011,8 @@ const ArchiveScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
 
 const TenantsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [quickSendTenant, setQuickSendTenant] = useState<typeof TENANTS[0] | null>(null);
+  const [tenantSendDone, setTenantSendDone] = useState(false);
 
   const filtered = TENANTS.filter(t =>
     t.name.includes(searchQuery) ||
@@ -3925,11 +4109,88 @@ const TenantsManagementScreen = ({ onSelect }: { onSelect: (v: View) => void }) 
                     {tenant.paid ? 'مدفوع' : 'متأخر'}
                   </span>
                 </div>
+                <button
+                  onClick={() => { setQuickSendTenant(tenant); setTenantSendDone(false); }}
+                  className="mt-3 w-full text-sky-600 text-xs font-bold flex items-center justify-center gap-1.5 py-2 rounded-xl bg-sky-50 hover:bg-sky-100 transition-colors"
+                >
+                  <Icon name="send" className="text-xs" /> إرسال رسالة للمستأجر
+                </button>
               </motion.div>
             );
           })}
         </div>
       </main>
+
+      {/* Quick Send Modal */}
+      <AnimatePresence>
+        {quickSendTenant && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center p-4"
+            onClick={() => { if (!tenantSendDone) setQuickSendTenant(null); }}
+          >
+            <motion.div
+              initial={{ y: 60, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 60, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white rounded-3xl w-full max-w-lg p-6 shadow-2xl"
+            >
+              {tenantSendDone ? (
+                <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="flex flex-col items-center py-6 text-center">
+                  <div className="size-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-3">
+                    <Icon name="check_circle" className="text-4xl" />
+                  </div>
+                  <h3 className="text-lg font-black text-brand-dark">تم الإرسال!</h3>
+                  <p className="text-xs text-slate-400 mt-1">تم إرسال الرسالة إلى {quickSendTenant.name}</p>
+                </motion.div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 gold-gradient rounded-full flex items-center justify-center text-brand-dark font-black text-base shadow-sm">
+                      {quickSendTenant.name[0]}
+                    </div>
+                    <div>
+                      <h3 className="font-black text-brand-dark">{quickSendTenant.name}</h3>
+                      <p className="text-[10px] text-slate-400">{quickSendTenant.property} — {quickSendTenant.unit} • {quickSendTenant.phone}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs font-bold text-slate-500 mb-3">اختر القالب المناسب:</p>
+                  <div className="space-y-2 max-h-64 overflow-y-auto mb-4">
+                    {MSG_TEMPLATES.filter(t => t.recipient === 'مستأجر').map(tmpl => (
+                      <button
+                        key={tmpl.id}
+                        onClick={() => { setTenantSendDone(true); setTimeout(() => setQuickSendTenant(null), 1600); }}
+                        className={cn("w-full text-right p-3 rounded-xl border flex items-start gap-3 transition-all hover:border-sky-300 hover:bg-sky-50", tmpl.bg, "border-transparent")}
+                      >
+                        <div className={cn("size-8 rounded-lg flex items-center justify-center shrink-0 bg-white/60", tmpl.color)}>
+                          <Icon name={tmpl.icon} className="text-sm" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <p className="text-xs font-black text-brand-dark">{tmpl.title}</p>
+                            {tmpl.auto && <span className="text-[8px] font-black bg-primary/10 text-primary px-1.5 py-0.5 rounded-full shrink-0">آلي</span>}
+                          </div>
+                          <p className="text-[10px] text-slate-400 font-bold">{tmpl.category}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setQuickSendTenant(null)}
+                    className="w-full py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-colors"
+                  >
+                    إلغاء
+                  </button>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <BottomNav active="manager_dashboard" onSelect={onSelect} />
     </div>
   );
@@ -4838,6 +5099,38 @@ const OwnerDashboard = ({ onSelect }: { onSelect: (v: View) => void }) => {
             ))}
           </section>
         )}
+
+        {/* Quick Links */}
+        <section className="space-y-3">
+          <h3 className="font-bold text-brand-dark flex items-center gap-2">
+            <Icon name="bolt" className="text-primary" />
+            إجراءات سريعة
+          </h3>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { label: 'قوالب الرسائل', icon: 'mark_email_unread', view: 'msg_templates', bg: 'bg-indigo-50', color: 'text-indigo-600', desc: 'راسل مستأجريك' },
+              { label: 'نماذج العقارات', icon: 'description', view: 'property_forms', bg: 'bg-rose-50', color: 'text-rose-600', desc: 'استلام وإخلاء وفحص' },
+              { label: 'مركز التنبيهات', icon: 'notifications', view: 'notifications', bg: 'bg-amber-50', color: 'text-amber-600', desc: 'تتبع التنبيهات' },
+              { label: 'تقارير الأداء', icon: 'bar_chart', view: 'reports', bg: 'bg-sky-50', color: 'text-sky-600', desc: 'تقارير عقاراتك' },
+            ].map((item, i) => (
+              <motion.button
+                key={i}
+                whileHover={{ y: -3 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => onSelect(item.view as View)}
+                className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3 text-right hover:shadow-md transition-all"
+              >
+                <div className={cn("size-10 rounded-xl flex items-center justify-center shrink-0", item.bg, item.color)}>
+                  <Icon name={item.icon} className="text-lg" />
+                </div>
+                <div>
+                  <p className="text-xs font-black text-brand-dark">{item.label}</p>
+                  <p className="text-[10px] text-slate-400">{item.desc}</p>
+                </div>
+              </motion.button>
+            ))}
+          </div>
+        </section>
       </main>
 
       {/* Bottom Nav */}
@@ -4858,6 +5151,10 @@ const OwnerDashboard = ({ onSelect }: { onSelect: (v: View) => void }) => {
         <button onClick={() => onSelect('maintenance')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 px-3 py-1">
           <Icon name="build" className="text-2xl" />
           <span className="text-[10px] font-black">الصيانة</span>
+        </button>
+        <button onClick={() => onSelect('msg_templates')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 px-3 py-1">
+          <Icon name="mark_email_unread" className="text-2xl" />
+          <span className="text-[10px] font-black">الرسائل</span>
         </button>
         <button onClick={() => onSelect('welcome')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-red-500 px-3 py-1">
           <Icon name="logout" className="text-2xl" />
@@ -5523,8 +5820,8 @@ const MessageTemplatesScreen = ({ onSelect }: { onSelect: (v: View) => void }) =
 
 // --- Property Forms Screen ---
 
-const PropertyFormsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
-  const [activeCategory, setActiveCategory] = useState('الكل');
+const PropertyFormsScreen = ({ onSelect, initialCategory = 'الكل' }: { onSelect: (v: View) => void; initialCategory?: string }) => {
+  const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [openForm, setOpenForm] = useState<typeof PROPERTY_FORMS[0] | null>(null);
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -5768,6 +6065,12 @@ const PropertyFormsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('welcome');
   const [selectedProperty, setSelectedProperty] = useState(PROPERTIES[0]);
+  const [propertyFormsCategory, setPropertyFormsCategory] = useState('الكل');
+
+  const navigateToForms = (category: string) => {
+    setPropertyFormsCategory(category);
+    setCurrentView('property_forms');
+  };
 
   const handleSelectProperty = (view: View, property: any) => {
     setSelectedProperty(property);
@@ -5788,7 +6091,7 @@ export default function App() {
       case 'maintenance': return <MaintenanceScreen onSelect={setCurrentView} />;
       case 'property_details': return <PropertyDetailsScreen onSelect={setCurrentView} property={selectedProperty} />;
       case 'new_maintenance': return <NewMaintenanceRequestScreen onSelect={setCurrentView} />;
-      case 'tenant_dashboard': return <TenantDashboard onSelect={setCurrentView} />;
+      case 'tenant_dashboard': return <TenantDashboard onSelect={setCurrentView} onNavigateForms={navigateToForms} />;
       case 'settings': return <SettingsScreen onSelect={setCurrentView} />;
       case 'reports': return <ReportsScreen onSelect={setCurrentView} />;
       case 'add_property': return <AddPropertyScreen onSelect={setCurrentView} />;
@@ -5816,7 +6119,7 @@ export default function App() {
       case 'owner_dashboard': return <OwnerDashboard onSelect={setCurrentView} />;
       case 'tech_portal': return <TechPortal onSelect={setCurrentView} />;
       case 'msg_templates': return <MessageTemplatesScreen onSelect={setCurrentView} />;
-      case 'property_forms': return <PropertyFormsScreen onSelect={setCurrentView} />;
+      case 'property_forms': return <PropertyFormsScreen onSelect={setCurrentView} initialCategory={propertyFormsCategory} />;
       default: return <WelcomeScreen onSelect={setCurrentView} />;
     }
   };
