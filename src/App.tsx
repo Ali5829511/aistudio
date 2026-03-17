@@ -67,7 +67,8 @@ type View =
   | 'owner_dashboard'
   | 'tech_portal'
   | 'msg_templates'
-  | 'property_forms';
+  | 'property_forms'
+  | 'properties';
 
 // --- Constants & Mock Data ---
 
@@ -307,7 +308,7 @@ const BottomNav = ({ active, onSelect }: { active: View, onSelect: (v: View) => 
   const { t } = useLang();
   const items: NavItem[] = [
     { id: 'manager_dashboard', label: t('nav_home'), icon: 'grid_view' },
-    { id: 'property_details', label: t('nav_properties'), icon: 'apartment' },
+    { id: 'properties', label: t('nav_properties'), icon: 'apartment' },
     { id: 'ai_assistant', label: t('nav_ai_assistant'), icon: 'auto_awesome', highlight: true },
     { id: 'accounting', label: t('nav_finance'), icon: 'account_balance_wallet' },
     { id: 'settings', label: t('nav_settings'), icon: 'settings' },
@@ -1683,12 +1684,245 @@ const TenantSatisfactionReportScreen = ({ onSelect }: { onSelect: (v: View) => v
   );
 };
 
+// ── Properties List Screen ────────────────────────────────────────────────
+const PropertiesListScreen = ({
+  onSelect,
+  onSelectProperty,
+}: {
+  onSelect: (v: View) => void;
+  onSelectProperty: (v: View, p: any) => void;
+}) => {
+  const { t, lang } = useLang();
+  const { PROPERTIES, UNITS, CONTRACTS, MAINTENANCE_REQUESTS } = useAppData();
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('الكل');
+
+  const typeOptions = ['الكل', 'سكني', 'تجاري', 'سكني تجاري'];
+
+  const filtered = PROPERTIES.filter(p => {
+    const term = search.toLowerCase();
+    const matchSearch = p.name.toLowerCase().includes(term) || p.location.toLowerCase().includes(term);
+    const matchType   = typeFilter === 'الكل' || p.type === typeFilter;
+    return matchSearch && matchType;
+  });
+
+  const totalUnits  = PROPERTIES.reduce((s, p) => s + (Number(p.units) || 0), 0);
+  const vacantCount   = UNITS.filter(u => u.status === 'شاغرة').length;
+  const activeConts   = CONTRACTS.filter(c => c.status === 'ساري').length;
+  const openMaint     = MAINTENANCE_REQUESTS.filter(r => r.status !== 'completed').length;
+
+  return (
+    <div className="min-h-screen bg-[#f8f7f6] pb-24">
+      {/* Header */}
+      <header className="sticky top-0 z-30 bg-brand-dark px-5 pt-12 pb-5 shadow-xl">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-xl font-black text-white">العقارات</h1>
+            <p className="text-xs text-slate-400 mt-0.5">{toArabicDigits(PROPERTIES.length, lang)} عقار مسجل</p>
+          </div>
+          <button
+            onClick={() => onSelect('add_property')}
+            className="flex items-center gap-1.5 bg-primary text-brand-dark text-xs font-black px-4 py-2.5 rounded-xl hover:bg-primary/90 transition-all shadow-lg"
+          >
+            <Icon name="add_home" className="text-base" />
+            إضافة عقار
+          </button>
+        </div>
+
+        {/* Summary Stats */}
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { label: 'إجمالي الوحدات', value: totalUnits, icon: 'door_front', color: 'text-primary' },
+            { label: 'شاغرة', value: vacantCount, icon: 'lock_open', color: 'text-emerald-400' },
+            { label: 'عقود نشطة', value: activeConts, icon: 'history_edu', color: 'text-sky-400' },
+            { label: 'صيانة مفتوحة', value: openMaint, icon: 'build', color: 'text-rose-400' },
+          ].map((s) => (
+            <div key={s.label} className="bg-white/5 rounded-xl p-2.5 text-center">
+              <Icon name={s.icon} className={cn('text-lg', s.color)} />
+              <p className="text-sm font-black text-white mt-1">{toArabicDigits(s.value, lang)}</p>
+              <p className="text-[9px] text-slate-400 leading-tight mt-0.5">{s.label}</p>
+            </div>
+          ))}
+        </div>
+      </header>
+
+      <main className="px-4 pt-4 space-y-4">
+        {/* Search */}
+        <div className="relative">
+          <Icon name="search" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="ابحث باسم العقار أو الموقع..."
+            className="w-full bg-white border border-slate-200 rounded-xl py-3 pr-10 pl-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 shadow-sm"
+            dir="rtl"
+          />
+        </div>
+
+        {/* Type Filter */}
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          {typeOptions.map(opt => (
+            <button
+              key={opt}
+              onClick={() => setTypeFilter(opt)}
+              className={cn(
+                'flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-black transition-all',
+                typeFilter === opt
+                  ? 'bg-primary text-brand-dark shadow-md'
+                  : 'bg-white text-slate-500 border border-slate-200 hover:border-primary/30'
+              )}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+
+        {/* Properties Grid */}
+        {filtered.length === 0 ? (
+          <div className="text-center py-16 text-slate-400">
+            <Icon name="search_off" className="text-4xl mb-2" />
+            <p className="text-sm font-medium">لا توجد نتائج للبحث</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filtered.map(prop => {
+              const propVacant   = UNITS.filter(u => u.property === prop.name && u.status === 'شاغرة').length;
+              const propOccupied = UNITS.filter(u => u.property === prop.name && u.status === 'مؤجرة').length;
+              const propMaint    = MAINTENANCE_REQUESTS.filter(r => r.property === prop.name && r.status !== 'completed').length;
+              const propTotalUnits = Number(prop.units) || 0;
+              const occupancy    = propTotalUnits > 0 ? Math.round((propOccupied / propTotalUnits) * 100) : 0;
+
+              return (
+                <motion.div
+                  key={prop.id}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => onSelectProperty('property_details', prop)}
+                  className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden cursor-pointer hover:shadow-md transition-all"
+                >
+                  {/* Image */}
+                  <div className="h-36 bg-slate-200 relative overflow-hidden">
+                    <img
+                      src={`https://picsum.photos/seed/${prop.id}/600/300`}
+                      alt={prop.name}
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    <div className="absolute top-3 right-3 bg-primary text-brand-dark px-2.5 py-0.5 rounded-full text-[10px] font-black">
+                      {prop.type}
+                    </div>
+                    {propMaint > 0 && (
+                      <div className="absolute top-3 left-3 bg-rose-500 text-white px-2 py-0.5 rounded-full text-[10px] font-black flex items-center gap-1">
+                        <Icon name="build" className="text-[11px]" />
+                        {toArabicDigits(propMaint, lang)}
+                      </div>
+                    )}
+                    <div className="absolute bottom-3 right-3 left-3 flex items-end justify-between">
+                      <p className="text-white text-xs font-bold flex items-center gap-1">
+                        <Icon name="location_on" className="text-primary text-sm" />
+                        {prop.location}
+                      </p>
+                      <div className="flex gap-1.5">
+                        <button
+                          onClick={e => { e.stopPropagation(); onSelectProperty('property_report', prop); }}
+                          className="size-7 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center text-white hover:bg-primary hover:text-brand-dark transition-all"
+                          title="تقرير"
+                        >
+                          <Icon name="description" className="text-sm" />
+                        </button>
+                        <button
+                          onClick={e => {
+                            e.stopPropagation();
+                            (window as any).selectProperty(prop);
+                            setTimeout(() => window.print(), 400);
+                          }}
+                          className="size-7 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center text-white hover:bg-brand-yellow hover:text-brand-dark transition-all"
+                          title="طباعة"
+                        >
+                          <Icon name="print" className="text-sm" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Body */}
+                  <div className="p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className="text-base font-black text-brand-dark">{prop.name}</h3>
+                      <Icon name="arrow_back" className="text-primary text-xl mt-0.5" />
+                    </div>
+
+                    {/* Occupancy bar */}
+                    <div className="mb-3">
+                      <div className="flex justify-between text-[10px] text-slate-500 mb-1">
+                        <span>نسبة الإشغال</span>
+                        <span className="font-black text-brand-dark">{toArabicDigits(occupancy, lang)}٪</span>
+                      </div>
+                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary rounded-full transition-all"
+                          style={{ width: `${occupancy}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Mini stats row */}
+                    <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-50">
+                      <div className="text-center">
+                        <p className="text-xs font-black text-brand-dark">{toArabicDigits(propTotalUnits, lang)}</p>
+                        <p className="text-[9px] text-slate-400">وحدة</p>
+                      </div>
+                      <div className="text-center border-x border-slate-100">
+                        <p className="text-xs font-black text-emerald-500">{toArabicDigits(propVacant, lang)}</p>
+                        <p className="text-[9px] text-slate-400">شاغرة</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs font-black text-sky-500">{toArabicDigits(propOccupied, lang)}</p>
+                        <p className="text-[9px] text-slate-400">مؤجرة</p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+      </main>
+
+      <BottomNav active="properties" onSelect={onSelect} />
+    </div>
+  );
+};
+
+
 const PropertyDetailsScreen = ({ onSelect, property }: { onSelect: (v: View) => void, property: any }) => {
-  const { TENANTS, MAINTENANCE_REQUESTS, UNITS } = useAppData();
+  const { t, lang } = useLang();
+  const { TENANTS, MAINTENANCE_REQUESTS, UNITS, CONTRACTS } = useAppData();
+
+  // ── Compute stats from real data ─────────────────────────────────────────
+  const propUnits    = UNITS.filter(u => u.property === property.name);
+  const vacantUnits  = propUnits.filter(u => u.status === 'شاغرة').length;
+  const occupiedUnits = propUnits.filter(u => u.status === 'مؤجرة').length;
+  const totalUnits   = Number(property.units) || 0;
+  const occupancyPct = totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0;
+
+  const propContracts   = CONTRACTS.filter(c => c.property === property.name);
+  const activeContracts = propContracts.filter(c => c.status === 'ساري').length;
+
+  const monthlyIncome = propContracts
+    .filter(c => c.status === 'ساري')
+    .reduce((sum, c) => {
+      const val = Number(String(c.rent ?? '0').replace(/,/g, ''));
+      return sum + (isNaN(val) ? 0 : val);
+    }, 0);
+
+  const propMaint = MAINTENANCE_REQUESTS.filter(r => r.property === property.name);
+
   return (
     <div className="min-h-screen bg-[#f8f7f6] pb-24">
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-primary/10 px-4 pt-12 pb-4 flex items-center justify-between">
-        <button onClick={() => onSelect('manager_dashboard')} className="p-2 rounded-full hover:bg-black/5 transition-colors">
+        <button onClick={() => onSelect('properties')} className="p-2 rounded-full hover:bg-black/5 transition-colors">
           <Icon name="arrow_forward" />
         </button>
         <h1 className="text-lg font-bold">تفاصيل العقار</h1>
@@ -1742,15 +1976,15 @@ const PropertyDetailsScreen = ({ onSelect, property }: { onSelect: (v: View) => 
             <div className="grid grid-cols-3 gap-4 pt-4 border-t border-slate-50">
               <div className="text-center">
                 <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">إجمالي الوحدات</p>
-                <p className="text-xl font-black text-brand-dark">{toArabicDigits(property.units)}</p>
+                <p className="text-xl font-black text-brand-dark">{toArabicDigits(totalUnits, lang)}</p>
               </div>
               <div className="text-center border-x border-slate-100">
                 <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">الوحدات الشاغرة</p>
-                <p className="text-xl font-black text-emerald-500">٤</p>
+                <p className="text-xl font-black text-emerald-500">{toArabicDigits(vacantUnits, lang)}</p>
               </div>
               <div className="text-center">
                 <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">العقود النشطة</p>
-                <p className="text-xl font-black text-brand-dark">٤٤</p>
+                <p className="text-xl font-black text-brand-dark">{toArabicDigits(activeContracts, lang)}</p>
               </div>
             </div>
           </motion.div>
@@ -1763,7 +1997,12 @@ const PropertyDetailsScreen = ({ onSelect, property }: { onSelect: (v: View) => 
           >
             <div>
               <p className="text-slate-500 text-xs font-medium mb-1">إجمالي الدخل الشهري</p>
-              <p className="text-2xl font-bold">١٢٥,٠٠٠ <span className="text-sm font-medium text-primary">ر.س</span></p>
+              <p className="text-2xl font-bold">
+                {monthlyIncome > 0
+                  ? toArabicDigits(monthlyIncome.toLocaleString('en'), lang)
+                  : '—'}
+                {' '}<span className="text-sm font-medium text-primary">ر.س</span>
+              </p>
             </div>
             <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-primary"><Icon name="payments" /></div>
           </motion.div>
@@ -1775,7 +2014,7 @@ const PropertyDetailsScreen = ({ onSelect, property }: { onSelect: (v: View) => 
               <span className="text-slate-500 text-xs font-medium">إجمالي الوحدات</span>
               <Icon name="apartment" className="text-primary/60 text-lg" />
             </div>
-            <p className="text-2xl font-bold">٢٤</p>
+            <p className="text-2xl font-bold">{toArabicDigits(totalUnits, lang)}</p>
           </motion.div>
           <motion.div 
             whileHover={{ y: -2 }}
@@ -1785,8 +2024,8 @@ const PropertyDetailsScreen = ({ onSelect, property }: { onSelect: (v: View) => 
               <span className="text-slate-500 text-xs font-medium">مشغولة</span>
               <span className="h-2 w-2 rounded-full bg-green-500 mt-1"></span>
             </div>
-            <p className="text-2xl font-bold">٢٠</p>
-            <p className="text-xs text-green-600 font-medium">٨٣٪ نسبة الإشغال</p>
+            <p className="text-2xl font-bold">{toArabicDigits(occupiedUnits, lang)}</p>
+            <p className="text-xs text-green-600 font-medium">{toArabicDigits(occupancyPct, lang)}٪ نسبة الإشغال</p>
           </motion.div>
         </div>
 
@@ -1795,27 +2034,33 @@ const PropertyDetailsScreen = ({ onSelect, property }: { onSelect: (v: View) => 
             <h3 className="text-base font-bold">سجل الصيانة</h3>
             <button onClick={() => onSelect('maintenance')} className="text-xs text-primary font-bold">عرض الكل</button>
           </div>
-          <div className="space-y-3">
-            {MAINTENANCE_REQUESTS.filter(r => r.property === 'برج بيان' || r.property === 'عمارة النخيل').slice(0, 2).map(req => (
-              <div key={req.id} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="size-10 bg-slate-100 rounded-lg flex items-center justify-center text-slate-500">
-                    <Icon name={req.type === 'سباكة' ? 'faucet' : req.type === 'كهرباء' ? 'bolt' : req.type === 'تكييف' ? 'ac_unit' : 'format_paint'} />
+          {propMaint.length === 0 ? (
+            <div className="bg-white rounded-xl p-6 text-center text-slate-400 text-sm border border-slate-100">
+              لا توجد طلبات صيانة لهذا العقار
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {propMaint.slice(0, 3).map(req => (
+                <div key={req.id} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="size-10 bg-slate-100 rounded-lg flex items-center justify-center text-slate-500">
+                      <Icon name={req.type === 'سباكة' ? 'faucet' : req.type === 'كهرباء' ? 'bolt' : req.type === 'تكييف' ? 'ac_unit' : 'format_paint'} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold">{req.type} - {req.unit}</p>
+                      <p className="text-[10px] text-slate-500">{req.date} • {req.technician}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-bold">{req.type} - {req.unit}</p>
-                    <p className="text-[10px] text-slate-500">{req.date} • {req.technician}</p>
-                  </div>
+                  <span className={cn(
+                    "px-2 py-0.5 rounded-full text-[9px] font-bold",
+                    req.status === 'completed' ? "bg-emerald-100 text-emerald-600" : "bg-blue-100 text-blue-600"
+                  )}>
+                    {req.status === 'completed' ? 'مكتمل' : 'قيد التنفيذ'}
+                  </span>
                 </div>
-                <span className={cn(
-                  "px-2 py-0.5 rounded-full text-[9px] font-bold",
-                  req.status === 'completed' ? "bg-emerald-100 text-emerald-600" : "bg-blue-100 text-blue-600"
-                )}>
-                  {req.status === 'completed' ? 'مكتمل' : 'قيد التنفيذ'}
-                </span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="px-5 space-y-3">
@@ -1836,7 +2081,7 @@ const PropertyDetailsScreen = ({ onSelect, property }: { onSelect: (v: View) => 
         </section>
       </main>
 
-      <BottomNav active="property_details" onSelect={onSelect} />
+      <BottomNav active="properties" onSelect={onSelect} />
     </div>
   );
 };
@@ -6551,7 +6796,7 @@ export default function App() {
   const handleNavigate = (view: View) => {
     const managerViews: View[] = [
       'manager_dashboard', 'accounting', 'invoices', 'maintenance',
-      'property_details', 'new_maintenance', 'settings', 'reports',
+      'property_details', 'properties', 'new_maintenance', 'settings', 'reports',
       'add_property', 'owners', 'units', 'contracts', 'notifications',
       'support', 'docs', 'financial_report', 'zakat_tax', 'ejar_integration',
       'tech_performance', 'dev_center', 'archive', 'tenant_satisfaction',
@@ -6592,6 +6837,7 @@ export default function App() {
       case 'accounting': return <AccountingScreen onSelect={handleNavigate} />;
       case 'invoices': return <InvoicesScreen onSelect={handleNavigate} />;
       case 'maintenance': return <MaintenanceScreen onSelect={handleNavigate} />;
+      case 'properties': return <PropertiesListScreen onSelect={handleNavigate} onSelectProperty={handleSelectProperty} />;
       case 'property_details': return <PropertyDetailsScreen onSelect={handleNavigate} property={selectedProperty} />;
       case 'new_maintenance': return <NewMaintenanceRequestScreen onSelect={handleNavigate} />;
       case 'tenant_dashboard': return <TenantDashboard onSelect={setCurrentView} onNavigateForms={navigateToForms} />;
