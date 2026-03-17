@@ -101,6 +101,11 @@ export const apiAddProperty = (data: {
   id: string; name: string; location: string; units: number; type: string;
 }) => post<Property>('/properties', data);
 
+/** Update an existing property */
+export const apiUpdateProperty = (id: string, updates: {
+  name?: string; location?: string; units?: number; type?: string;
+}) => patch<Property>(`/properties/${id}`, updates);
+
 /** Create a new contract */
 export const apiCreateContract = (data: {
   tenant: string; unit: string; property: string;

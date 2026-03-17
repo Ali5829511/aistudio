@@ -28,6 +28,14 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const writeLimiter = rateLimit({
+  windowMs: 60 * 1000,       // 1 minute
+  max: 60,                   // max 60 write operations per minute per IP
+  message: { error: 'عدد كبير من العمليات، يرجى المحاولة لاحقاً' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // ── Auth ──────────────────────────────────────────────────────────────────
 app.post('/api/auth/login', loginLimiter, (req, res) => {
   const { email, password } = req.body as { email?: string; password?: string };
@@ -54,7 +62,7 @@ app.get('/api/properties', (_req, res) => {
   res.json(rows);
 });
 
-app.post('/api/properties', (req, res) => {
+app.post('/api/properties', writeLimiter, (req, res) => {
   const { id, name, location, units, type } = req.body as {
     id: string; name: string; location: string; units: number; type: string;
   };
@@ -65,13 +73,35 @@ app.post('/api/properties', (req, res) => {
   res.status(201).json(db.prepare('SELECT * FROM properties WHERE id = ?').get(id));
 });
 
+app.patch('/api/properties/:id', writeLimiter, (req, res) => {
+  const { id } = req.params;
+  const { name, location, units, type } = req.body as {
+    name?: string; location?: string; units?: number; type?: string;
+  };
+  const existing = db.prepare('SELECT * FROM properties WHERE id = ?').get(id);
+  if (!existing) return res.status(404).json({ error: 'property not found' });
+
+  const setClauses: string[] = [];
+  const params: unknown[] = [];
+  if (name !== undefined)     { setClauses.push('name = ?');     params.push(name); }
+  if (location !== undefined) { setClauses.push('location = ?'); params.push(location); }
+  if (units !== undefined)    { setClauses.push('units = ?');    params.push(units); }
+  if (type !== undefined)     { setClauses.push('type = ?');     params.push(type); }
+
+  if (setClauses.length > 0) {
+    params.push(id);
+    db.prepare(`UPDATE properties SET ${setClauses.join(', ')} WHERE id = ?`).run(...params);
+  }
+  res.json(db.prepare('SELECT * FROM properties WHERE id = ?').get(id));
+});
+
 // ── Maintenance Requests ──────────────────────────────────────────────────
 app.get('/api/maintenance', (_req, res) => {
   const rows = db.prepare('SELECT * FROM maintenance_requests ORDER BY date DESC').all();
   res.json(rows.map(mapMaintenance));
 });
 
-app.post('/api/maintenance', (req, res) => {
+app.post('/api/maintenance', writeLimiter, (req, res) => {
   const { property, unit, date, type, technician, description, priority } = req.body as {
     property: string; unit: string; date: string; type: string;
     technician: string; description: string; priority: string;
@@ -88,7 +118,7 @@ app.post('/api/maintenance', (req, res) => {
   res.status(201).json(mapMaintenance(row as Record<string, unknown>));
 });
 
-app.patch('/api/maintenance/:id', (req, res) => {
+app.patch('/api/maintenance/:id', writeLimiter, (req, res) => {
   const { id } = req.params;
   const { status, technician } = req.body as { status?: string; technician?: string };
   const validStatuses = ['new', 'in_progress', 'completed'];
@@ -107,7 +137,7 @@ app.get('/api/units', (_req, res) => {
   res.json(rows);
 });
 
-app.patch('/api/units/:id', (req, res) => {
+app.patch('/api/units/:id', writeLimiter, (req, res) => {
   const { id } = req.params;
   const { status } = req.body as { status: string };
   db.prepare('UPDATE units SET status = ? WHERE id = ?').run(status, id);
@@ -122,7 +152,7 @@ app.get('/api/tenants', (_req, res) => {
   res.json(rows.map(mapTenant));
 });
 
-app.post('/api/tenants/:id/payment', (req, res) => {
+app.post('/api/tenants/:id/payment', writeLimiter, (req, res) => {
   const { id } = req.params;
   db.prepare('UPDATE tenants SET paid = 1 WHERE id = ?').run(id);
   const row = db.prepare('SELECT * FROM tenants WHERE id = ?').get(id);
@@ -150,7 +180,7 @@ app.get('/api/contracts', (_req, res) => {
   res.json(rows.map(mapContract));
 });
 
-app.post('/api/contracts', (req, res) => {
+app.post('/api/contracts', writeLimiter, (req, res) => {
   const { tenant, unit, property, start, end, rent, status } = req.body as {
     tenant: string; unit: string; property: string;
     start: string; end: string; rent: string; status: string;
@@ -165,7 +195,7 @@ app.post('/api/contracts', (req, res) => {
   res.status(201).json(mapContract(row as Record<string, unknown>));
 });
 
-app.patch('/api/contracts/:id', (req, res) => {
+app.patch('/api/contracts/:id', writeLimiter, (req, res) => {
   const { id } = req.params;
   const { status, end } = req.body as { status?: string; end?: string };
   if (status) db.prepare('UPDATE contracts SET status = ? WHERE id = ?').run(status, id);

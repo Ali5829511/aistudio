@@ -10,7 +10,7 @@ import {
   apiGetProperties, apiGetMaintenance, apiGetUnits, apiGetTenants,
   apiGetOwners, apiGetContracts, apiGetVendors, apiGetInvoices,
   apiUpdateMaintenanceStatus, apiCreateMaintenance, apiRecordPayment,
-  apiAddProperty, apiCreateContract, apiUpdateContract,
+  apiAddProperty, apiUpdateProperty, apiCreateContract, apiUpdateContract,
   apiLogin,
   type Property, type MaintenanceRequest, type Unit, type Tenant,
   type Owner, type Contract, type Vendor, type Invoice, type AdminUser,
@@ -270,6 +270,7 @@ interface AppData {
   }) => Promise<void>;
   recordPayment: (tenantId: string) => Promise<void>;
   addProperty: (data: Property) => Promise<void>;
+  updateProperty: (id: string, updates: { name?: string; location?: string; units?: number; type?: string }) => Promise<void>;
   renewContract: (id: string, newEnd: string) => Promise<void>;
 }
 
@@ -286,6 +287,7 @@ const AppDataContext = createContext<AppData>({
   createMaintenanceRequest: async () => {},
   recordPayment: async () => {},
   addProperty: async () => {},
+  updateProperty: async () => {},
   renewContract: async () => {},
 });
 
@@ -1896,9 +1898,41 @@ const PropertiesListScreen = ({
 };
 
 
-const PropertyDetailsScreen = ({ onSelect, property }: { onSelect: (v: View) => void, property: any }) => {
-  const { t, lang } = useLang();
-  const { TENANTS, MAINTENANCE_REQUESTS, UNITS, CONTRACTS } = useAppData();
+const PropertyDetailsScreen = ({ onSelect, property: initialProperty }: { onSelect: (v: View) => void, property: any }) => {
+  const { lang } = useLang();
+  const { MAINTENANCE_REQUESTS, UNITS, CONTRACTS, updateProperty } = useAppData();
+
+  // ── Local editable copy of the property ──────────────────────────────────
+  const [property, setProperty] = useState(initialProperty);
+  const [showEdit, setShowEdit]   = useState(false);
+  const [editName, setEditName]   = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [editUnits, setEditUnits] = useState('');
+  const [editType, setEditType]   = useState('');
+  const [isSaving, setIsSaving]   = useState(false);
+
+  const openEdit = () => {
+    setEditName(property.name);
+    setEditLocation(property.location);
+    setEditUnits(String(property.units));
+    setEditType(property.type);
+    setShowEdit(true);
+  };
+
+  const handleSaveEdit = async () => {
+    setIsSaving(true);
+    const parsedUnits = editUnits.trim() !== '' ? Number(editUnits) : Number(property.units);
+    const updates = {
+      name:     editName.trim()     || property.name,
+      location: editLocation.trim() || property.location,
+      units:    isNaN(parsedUnits)  ? Number(property.units) : parsedUnits,
+      type:     editType.trim()     || property.type,
+    };
+    await updateProperty(property.id, updates);
+    setProperty((prev: any) => ({ ...prev, ...updates }));
+    setShowEdit(false);
+    setIsSaving(false);
+  };
 
   // ── Compute stats from real data ─────────────────────────────────────────
   const propUnits    = UNITS.filter(u => u.property === property.name);
@@ -1941,11 +1975,107 @@ const PropertyDetailsScreen = ({ onSelect, property }: { onSelect: (v: View) => 
           >
             <Icon name="description" />
           </button>
-          <button className="p-2 rounded-full hover:bg-black/5 transition-colors text-primary">
+          <button
+            onClick={openEdit}
+            className="p-2 rounded-full hover:bg-black/5 transition-colors text-primary"
+            title="تعديل العقار"
+          >
             <Icon name="edit" />
           </button>
         </div>
       </header>
+
+      {/* ── Edit Bottom Sheet ─────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {showEdit && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowEdit(false)}
+              className="fixed inset-0 bg-black/40 z-[60]"
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-[60] p-6 pb-28 shadow-2xl"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-black text-brand-dark">تعديل بيانات العقار</h3>
+                <button onClick={() => setShowEdit(false)} className="p-1.5 rounded-full hover:bg-slate-100 text-slate-500">
+                  <Icon name="close" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-bold text-slate-500">اسم العقار</label>
+                  <input
+                    value={editName}
+                    onChange={e => setEditName(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 px-4 text-sm focus:ring-2 focus:ring-primary outline-none"
+                    dir="rtl"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-bold text-slate-500">الموقع</label>
+                  <div className="relative">
+                    <input
+                      value={editLocation}
+                      onChange={e => setEditLocation(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pr-10 pl-4 text-sm focus:ring-2 focus:ring-primary outline-none"
+                      dir="rtl"
+                    />
+                    <Icon name="location_on" className="absolute right-3 top-3 text-slate-400 text-base" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-bold text-slate-500">نوع العقار</label>
+                    <select
+                      value={editType}
+                      onChange={e => setEditType(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 px-4 text-sm focus:ring-2 focus:ring-primary outline-none"
+                    >
+                      <option value="سكني">سكني</option>
+                      <option value="تجاري">تجاري</option>
+                      <option value="سكني تجاري">سكني تجاري</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-bold text-slate-500">عدد الوحدات</label>
+                    <input
+                      value={editUnits}
+                      onChange={e => setEditUnits(e.target.value)}
+                      type="number"
+                      min="0"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 px-4 text-sm focus:ring-2 focus:ring-primary outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={handleSaveEdit}
+                disabled={isSaving}
+                className={cn(
+                  "w-full mt-6 py-3.5 font-black text-sm rounded-2xl transition-all flex items-center justify-center gap-2",
+                  isSaving ? "bg-slate-300 text-slate-500 cursor-not-allowed" : "bg-primary text-brand-dark hover:bg-primary/90 shadow-lg shadow-primary/20"
+                )}
+              >
+                {isSaving ? (
+                  <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
+                    <Icon name="sync" className="text-base" />
+                  </motion.div>
+                ) : (
+                  <><Icon name="save" className="text-base" /> حفظ التعديلات</>
+                )}
+              </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       <main className="space-y-6">
         <div className="px-5">
@@ -2769,23 +2899,28 @@ const AddPropertyScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [propertyName, setPropertyName] = useState('');
+  const [propertyType, setPropertyType] = useState('سكني');
+  const [location, setLocation] = useState('');
+  const [units, setUnits] = useState('');
+  const [buildYear, setBuildYear] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    const exists = PROPERTIES.some(p => p.name === propertyName);
+    const exists = PROPERTIES.some(p => p.name === propertyName.trim());
     if (exists) { setError(t('property_exists')); return; }
+    if (!location.trim()) { setError(t('location_placeholder') || 'يرجى إدخال الموقع'); return; }
     setIsSubmitting(true);
     try {
       await addProperty({
         id: String(Date.now()),
-        name: propertyName,
-        location: '',
-        units: 0,
-        type: 'سكني',
+        name: propertyName.trim(),
+        location: location.trim(),
+        units: units.trim() !== '' ? (Number(units) >= 0 ? Number(units) : 0) : 0,
+        type: propertyType,
       });
       setIsSuccess(true);
-      setTimeout(() => onSelect('manager_dashboard'), 1500);
+      setTimeout(() => onSelect('properties'), 1500);
     } catch {
       setError(t('error_saving'));
     } finally {
@@ -2812,7 +2947,7 @@ const AddPropertyScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
   return (
     <div className="min-h-screen bg-[#f8f8f5] pb-24">
       <header className="flex items-center justify-between p-4 bg-white sticky top-0 z-10 shadow-sm border-b border-primary/10">
-        <button onClick={() => onSelect('manager_dashboard')} className="p-2 rounded-full hover:bg-slate-100 transition-colors">
+        <button onClick={() => onSelect('properties')} className="p-2 rounded-full hover:bg-slate-100 transition-colors">
           <Icon name="arrow_forward" className="text-2xl" />
         </button>
         <h2 className="text-lg font-bold flex-1 text-center pr-12">{t('add_property_title')}</h2>
@@ -2843,27 +2978,54 @@ const AddPropertyScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-sm font-bold">{t('property_type')}</label>
-              <select className="w-full rounded-xl border border-gray-200 bg-white py-3 px-4 focus:ring-2 focus:ring-primary outline-none transition-all">
-                <option>{t('residential')}</option>
-                <option>{t('commercial')}</option>
-                <option>{t('mixed')}</option>
+              <select
+                value={propertyType}
+                onChange={(e) => setPropertyType(e.target.value)}
+                className="w-full rounded-xl border border-gray-200 bg-white py-3 px-4 focus:ring-2 focus:ring-primary outline-none transition-all"
+              >
+                <option value="سكني">{t('residential')}</option>
+                <option value="تجاري">{t('commercial')}</option>
+                <option value="سكني تجاري">{t('mixed')}</option>
               </select>
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-sm font-bold">{t('location')}</label>
               <div className="relative">
-                <input required className="w-full rounded-xl border border-gray-200 bg-white py-3 pr-10 pl-4 focus:ring-2 focus:ring-primary outline-none transition-all" placeholder={t('location_placeholder')} type="text" />
+                <input
+                  required
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 bg-white py-3 pr-10 pl-4 focus:ring-2 focus:ring-primary outline-none transition-all"
+                  placeholder={t('location_placeholder')}
+                  type="text"
+                />
                 <Icon name="location_on" className="absolute right-3 top-3 text-gray-400" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-bold">{t('unit_count_label')}</label>
-                <input required className="w-full rounded-xl border border-gray-200 bg-white py-3 px-4 focus:ring-2 focus:ring-primary outline-none transition-all" placeholder="0" type="number" />
+                <input
+                  required
+                  value={units}
+                  onChange={(e) => setUnits(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 bg-white py-3 px-4 focus:ring-2 focus:ring-primary outline-none transition-all"
+                  placeholder="0"
+                  type="number"
+                  min="0"
+                />
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-bold">{t('build_year')}</label>
-                <input className="w-full rounded-xl border border-gray-200 bg-white py-3 px-4 focus:ring-2 focus:ring-primary outline-none transition-all" placeholder="2024" type="number" />
+                <input
+                  value={buildYear}
+                  onChange={(e) => setBuildYear(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 bg-white py-3 px-4 focus:ring-2 focus:ring-primary outline-none transition-all"
+                  placeholder="2024"
+                  type="number"
+                  min="1900"
+                  max="2100"
+                />
               </div>
             </div>
           </div>
@@ -6740,6 +6902,11 @@ function AppDataProvider({ children }: { children: React.ReactNode }) {
     try { await apiAddProperty(data); } catch {}
   };
 
+  const updateProperty = async (id: string, updates: { name?: string; location?: string; units?: number; type?: string }) => {
+    setProperties(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+    try { await apiUpdateProperty(id, updates); } catch {}
+  };
+
   const renewContract = async (id: string, newEnd: string) => {
     setContracts(prev =>
       prev.map(c => c.id === id ? { ...c, end: newEnd, status: 'ساري' } : c)
@@ -6761,6 +6928,7 @@ function AppDataProvider({ children }: { children: React.ReactNode }) {
       createMaintenanceRequest,
       recordPayment,
       addProperty,
+      updateProperty,
       renewContract,
     }}>
       {children}
