@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
 import {
   auth,
-  googleProvider,
   db,
   handleFirestoreError,
   OperationType,
 } from "./firebase";
+import { onAuthStateChanged, User } from "firebase/auth";
 import {
   signInWithPopup,
   onAuthStateChanged,
@@ -5696,1695 +5695,81 @@ const PropertyReportScreen = ({
 // --- Main App ---
 
 import { collection, onSnapshot } from "firebase/firestore";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
 
-interface ChatMessage { id: string; text: string; sender: 'user' | 'assistant'; timestamp: Date; isError?: boolean; }
-const AIAssistantScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
-  const updateMaintenanceStatus = async (id: string, status: string) => { console.log('updateMaintenanceStatus', id, status); };
-  const recordPayment = async (tenantId: string) => { console.log('recordPayment', tenantId); };
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: '0',
-      role: 'assistant',
-      text: 'مرحباً! أنا مساعدك الذكي لإدارة الأملاك 🏢\n\nأستطيع مساعدتك في:\n• تحليل بيانات عقاراتك ومستأجريك\n• الإجابة على استفسارات المحاسبة والصيانة\n• اقتراح تحسينات وتطوير للتطبيق\n• تقديم توصيات لزيادة الإيرادات\n\nكيف يمكنني مساعدتك اليوم؟',
-      timestamp: new Date(),
-    },
-  ]);
-  const [inputText, setInputText] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+// Fix Leaflet default icon path issues
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+  iconUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+  shadowUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+});
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+import { View } from "./types";
+import { AppLayout } from "./components/shared";
+import {
+  WelcomeScreen, ManagerDashboard, AccountingScreen, InvoicesScreen,
+  MaintenanceScreen, PropertyDetailsScreen, NewMaintenanceRequestScreen,
+  TenantDashboard, SettingsScreen, ReportsScreen, AddPropertyScreen,
+  OwnersManagementScreen, UnitsManagementScreen, ContractsManagementScreen,
+  TechnicalDocsScreen, NotificationsScreen, FinancialReportScreen,
+  ZakatTaxScreen, EjarIntegrationScreen, TechPerformanceScreen,
+  DeveloperCenterScreen, ArchiveScreen, TenantSatisfactionReportScreen,
+  TenantsManagementScreen, VendorsManagementScreen, AssetManagementScreen,
+  PropertyReportScreen, OfficialPrintScreen, PublishingScreen,
+  AIAssistantScreen, PaymentScreen, OwnerDashboard, TechPortal,
+  MessageTemplatesScreen, PropertyFormsScreen, SupportScreen,
+} from "./pages";
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const sendMessage = async (text: string) => {
-    if (!text.trim() || isLoading) return;
-
-    const userMsg: ChatMessage = {
-      id: Date.now().toString(),
-      sender: 'user',
-      text: text.trim(),
-      timestamp: new Date(),
-    };
-    setMessages(prev => [...prev, userMsg]);
-    setInputText('');
-    setIsLoading(true);
-
-    try {
-      // Build conversation history for context
-      const history = messages.slice(1).map(m => ({
-        role: (m.sender === 'user' ? 'user' : 'model') as 'user' | 'model',
-        parts: [{ text: m.text }],
-      }));
-
-      // Call secure backend endpoint that communicates with Gemini using server-side API key
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          history,
-          prompt: text.trim(),
-          systemInstruction: PROPERTY_CONTEXT,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(errorBody || 'فشل طلب الدردشة إلى الخادم');
-      }
-
-      const data: { text?: string } = await response.json();
-
-      const assistantMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        sender: 'assistant',
-        text: data.text ?? 'لم أتمكن من الحصول على إجابة. يرجى المحاولة مرة أخرى.',
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, assistantMsg]);
-    } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : 'حدث خطأ غير متوقع';
-      const errorMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        sender: 'assistant',
-        text: `⚠️ ${errMsg}`,
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, errorMsg]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const formatTime = (d: Date) =>
-    d.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
-
-  return (
-    <div className="min-h-screen bg-[#f8f8f5] flex flex-col">
-      {/* Header */}
-      <header className="flex items-center justify-between p-4 bg-brand-dark sticky top-0 z-10 shadow-lg">
-        <button onClick={() => onSelect('manager_dashboard')} className="p-2 rounded-full hover:bg-white/10 transition-colors">
-          <Icon name="arrow_forward" className="text-2xl text-white" />
-        </button>
-        <div className="flex items-center gap-3 flex-1 justify-center pr-4">
-          <div className="w-9 h-9 gold-gradient rounded-full flex items-center justify-center shadow-md">
-            <Icon name="auto_awesome" className="text-brand-dark text-lg" filled />
-          </div>
-          <div>
-            <h2 className="text-base font-black text-white leading-none">المساعد الذكي</h2>
-            <p className="text-[9px] text-slate-400 font-bold mt-0.5">مدعوم بـ Gemini AI • رمز الإبداع</p>
-          </div>
-        </div>
-        <button
-          onClick={() => setMessages(prev => [prev[0]])}
-          className="p-2 rounded-full hover:bg-white/10 transition-colors"
-          title="مسح المحادثة"
-        >
-          <Icon name="delete_sweep" className="text-xl text-slate-400" />
-        </button>
-      </header>
-
-      {/* Messages */}
-      <main className="flex-1 overflow-y-auto p-4 space-y-4 pb-48">
-        <AnimatePresence initial={false}>
-          {messages.map((msg) => (
-            <motion.div
-              key={msg.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className={cn("flex gap-3", msg.role === 'user' ? "flex-row-reverse" : "flex-row")}
-            >
-              {/* Avatar */}
-              <div className={cn(
-                "w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-1",
-                msg.role === 'assistant'
-                  ? "gold-gradient text-brand-dark shadow-sm"
-                  : "bg-brand-dark text-white"
-              )}>
-                <Icon
-                  name={msg.role === 'assistant' ? 'auto_awesome' : 'person'}
-                  className="text-sm"
-                  filled
-                />
-              </div>
-
-              {/* Bubble */}
-              <div className={cn(
-                "max-w-[80%] space-y-1",
-                msg.role === 'user' ? "items-end" : "items-start"
-              )}>
-                <div className={cn(
-                  "px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap shadow-sm",
-                  msg.role === 'assistant'
-                    ? "bg-white border border-gray-100 text-slate-800 rounded-tr-none"
-                    : "bg-brand-dark text-white rounded-tl-none"
-                )}>
-                  {msg.text}
-                </div>
-                <p className={cn(
-                  "text-[9px] text-slate-400 px-1",
-                  msg.role === 'user' ? "text-right" : "text-left"
-                )}>
-                  {formatTime(msg.timestamp)}
-                </p>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-
-        {/* Typing indicator */}
-        {isLoading && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex gap-3"
-          >
-            <div className="w-8 h-8 rounded-full gold-gradient text-brand-dark flex items-center justify-center shrink-0 mt-1 shadow-sm">
-              <Icon name="auto_awesome" className="text-sm" filled />
-            </div>
-            <div className="bg-white border border-gray-100 px-4 py-3 rounded-2xl rounded-tr-none shadow-sm flex items-center gap-1">
-              {[0, 1, 2].map(i => (
-                <div
-                  key={i}
-                  className="w-2 h-2 bg-primary rounded-full animate-bounce"
-                  style={{ animationDelay: `${i * 0.15}s` }}
-                />
-              ))}
-            </div>
-          </motion.div>
-        )}
-        <div ref={messagesEndRef} />
-      </main>
-
-      {/* Quick Prompts + Input */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 pb-6 shadow-[0_-10px_30px_rgba(0,0,0,0.06)]">
-        {/* Quick Prompts strip */}
-        <div className="flex gap-2 overflow-x-auto px-4 pt-3 pb-2 no-scrollbar">
-          {AI_QUICK_PROMPTS.map((p, i) => (
-            <button
-              key={i}
-              onClick={() => sendMessage(p.text)}
-              disabled={isLoading}
-              className="shrink-0 flex items-center gap-1.5 text-[10px] font-bold bg-slate-50 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-full hover:bg-primary/10 hover:border-primary/30 hover:text-primary disabled:opacity-40 transition-colors"
-            >
-              <Icon name={p.icon} className="text-[12px]" />
-              {p.text}
-            </button>
-          ))}
-        </div>
-
-        {/* Text Input */}
-        <div className="flex items-end gap-3 px-4 pt-1">
-          <div className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 flex items-end gap-2 focus-within:border-primary/50 focus-within:bg-white transition-colors">
-            <textarea
-              value={inputText}
-              onChange={e => setInputText(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  sendMessage(inputText);
-                }
-              }}
-              placeholder="اكتب سؤالك هنا... (Enter للإرسال)"
-              rows={1}
-              className="flex-1 text-sm text-slate-800 placeholder-slate-400 resize-none outline-none bg-transparent max-h-28"
-              style={{ overflowY: 'auto' }}
-            />
-          </div>
-          <button
-            onClick={() => sendMessage(inputText)}
-            disabled={isLoading || !inputText.trim()}
-            className={cn(
-              "w-12 h-12 rounded-2xl flex items-center justify-center transition-all shrink-0 shadow-md",
-              isLoading || !inputText.trim()
-                ? "bg-slate-200 text-slate-400"
-                : "gold-gradient text-brand-dark hover:shadow-primary/30"
-            )}
-          >
-            {isLoading
-              ? <span className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
-              : <Icon name="send" className="text-xl" filled />
-            }
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const PUBLISH_PLATFORMS = [
-  {
-    name: 'Vercel',
-    desc: 'نشر فوري مع دعم CI/CD ونطاقات مخصصة',
-    icon: 'cloud_upload',
-    color: 'text-slate-800',
-    bg: 'bg-slate-100',
-    url: 'https://vercel.com/new',
-    badge: 'مجاني',
-    badgeColor: 'bg-green-100 text-green-700',
-    steps: ['سجّل في Vercel', 'اربط مستودع GitHub', 'أضف GEMINI_API_KEY في Environment Variables', 'انقر Deploy'],
-  },
-  {
-    name: 'Netlify',
-    desc: 'منصة نشر سهلة مع شبكة CDN عالمية',
-    icon: 'language',
-    color: 'text-teal-700',
-    bg: 'bg-teal-50',
-    url: 'https://app.netlify.com/start',
-    badge: 'مجاني',
-    badgeColor: 'bg-green-100 text-green-700',
-    steps: ['سجّل في Netlify', 'اربط مستودع GitHub', 'أضف GEMINI_API_KEY في Site Variables', 'انقر Deploy site'],
-  },
-  {
-    name: 'GitHub Pages',
-    desc: 'نشر مباشر من مستودعك على GitHub',
-    icon: 'hub',
-    color: 'text-gray-800',
-    bg: 'bg-gray-100',
-    url: 'https://pages.github.com',
-    badge: 'مجاني',
-    badgeColor: 'bg-green-100 text-green-700',
-    steps: ['شغّل: npm run build', 'ادفع مجلد dist إلى فرع gh-pages', 'فعّل GitHub Pages من إعدادات المستودع'],
-  },
-  {
-    name: 'Google Cloud Run',
-    desc: 'يعمل المشروع حالياً على Cloud Run في AI Studio',
-    icon: 'deployed_code',
-    color: 'text-blue-700',
-    bg: 'bg-blue-50',
-    url: 'https://console.cloud.google.com/run',
-    badge: 'مُفعَّل',
-    badgeColor: 'bg-blue-100 text-blue-700',
-    steps: ['المشروع مُضاف تلقائياً عبر AI Studio', 'يمكن إضافة نطاق مخصص من Cloud Console', 'راجع الإعدادات في قسم المتغيرات'],
-  },
+// Views that use their own full-page layout (no sidebar)
+const STANDALONE_VIEWS: View[] = [
+  "welcome", "tenant_dashboard", "owner_dashboard", "tech_portal",
 ];
 
-const PublishingScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
-  const [selectedPlatform, setSelectedPlatform] = useState<number | null>(null);
-  const [aiPrompt, setAiPrompt] = useState('');
-  const [aiResponse, setAiResponse] = useState('');
-  const [isAiLoading, setIsAiLoading] = useState(false);
-  const [aiError, setAiError] = useState('');
-
-  const handleAiRequest = async () => {
-    if (!aiPrompt.trim()) return;
-
-    setIsAiLoading(true);
-    setAiError('');
-    setAiResponse('');
-
-    try {
-      const response = await fetch('/api/ai', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ prompt: aiPrompt }),
-      });
-
-      if (!response.ok) {
-        throw new Error('فشل الطلب إلى خادم الذكاء الاصطناعي');
-      }
-
-      const data = await response.json();
-      const text =
-        (typeof data?.text === 'string' && data.text) ||
-        (typeof data?.response === 'string' && data.response) ||
-        '';
-
-      setAiResponse(text || 'لا توجد استجابة');
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'حدث خطأ غير متوقع';
-      setAiError(`تعذّر الاتصال بالذكاء الاصطناعي: ${msg}`);
-    } finally {
-      setIsAiLoading(false);
-    }
-  };
-
-  const quickPrompts = [
-    'كيف أضيف صفحة جديدة للمشروع؟',
-    'كيف أعدّل الألوان والثيم الرئيسي؟',
-    'اقترح تحسينات لشاشة لوحة التحكم',
-    'كيف أربط قاعدة بيانات حقيقية؟',
-    'أضف ميزة إشعارات الدفع للمشروع',
-  ];
-
-  return (
-    <div className="min-h-screen bg-[#f8f8f5] pb-24">
-      <header className="flex items-center justify-between p-4 bg-white sticky top-0 z-10 shadow-sm border-b border-primary/10">
-        <button onClick={() => onSelect('reports')} className="p-2 rounded-full hover:bg-slate-100 transition-colors">
-          <Icon name="arrow_forward" className="text-2xl" />
-        </button>
-        <h2 className="text-lg font-bold flex-1 text-center pr-12">نشر المشروع بالذكاء الاصطناعي</h2>
-      </header>
-
-      <main className="p-4 space-y-6">
-        {/* Hero Banner */}
-        <div className="bg-gradient-to-bl from-violet-600 to-indigo-700 text-white p-5 rounded-2xl shadow-lg">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-              <Icon name="rocket_launch" className="text-white text-xl" />
-            </div>
-            <div>
-              <h3 className="font-bold">انشر مشروعك للعالم</h3>
-              <p className="text-[11px] text-violet-200">اختر منصة النشر المناسبة واستخدم الذكاء الاصطناعي لتعديل المشروع</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 bg-white/10 rounded-xl p-2">
-            <Icon name="check_circle" className="text-green-300 text-sm" />
-            <p className="text-[10px] text-violet-100">ملفات الإعداد: <code className="font-mono">vercel.json</code> و <code className="font-mono">netlify.toml</code> جاهزة في المشروع</p>
-          </div>
-        </div>
-
-        {/* Platforms */}
-        <section className="space-y-3">
-          <h3 className="text-sm font-bold text-gray-500 px-1">منصات النشر المتاحة</h3>
-          <div className="grid grid-cols-1 gap-3">
-            {PUBLISH_PLATFORMS.map((platform, i) => (
-              <motion.div
-                key={i}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setSelectedPlatform(selectedPlatform === i ? null : i)}
-                className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer"
-              >
-                <div className="p-4 flex items-center gap-4">
-                  <div className={`w-11 h-11 rounded-xl ${platform.bg} ${platform.color} flex items-center justify-center shrink-0`}>
-                    <Icon name={platform.icon} />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <h4 className="font-bold text-sm">{platform.name}</h4>
-                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${platform.badgeColor}`}>{platform.badge}</span>
-                    </div>
-                    <p className="text-[11px] text-gray-400">{platform.desc}</p>
-                  </div>
-                  <Icon name={selectedPlatform === i ? 'expand_less' : 'expand_more'} className="text-gray-300" />
-                </div>
-                <AnimatePresence>
-                  {selectedPlatform === i && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="px-4 pb-4 border-t border-gray-50 pt-3 space-y-3">
-                        <h5 className="text-[11px] font-bold text-gray-500">خطوات النشر:</h5>
-                        <ol className="space-y-1.5">
-                          {platform.steps.map((step, si) => (
-                            <li key={si} className="flex items-start gap-2 text-[11px] text-gray-600">
-                              <span className="w-4 h-4 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-[9px] font-bold shrink-0 mt-0.5">{si + 1}</span>
-                              {step}
-                            </li>
-                          ))}
-                        </ol>
-                        <a
-                          href={platform.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={e => e.stopPropagation()}
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-violet-600 hover:underline"
-                        >
-                          <Icon name="open_in_new" className="text-[13px]" />
-                          افتح {platform.name}
-                        </a>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            ))}
-          </div>
-        </section>
-
-        {/* AI Project Editor */}
-        <section className="space-y-3">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-violet-100 rounded-lg flex items-center justify-center">
-              <Icon name="auto_awesome" className="text-violet-600 text-sm" />
-            </div>
-            <h3 className="text-sm font-bold">مساعد الذكاء الاصطناعي لتعديل المشروع</h3>
-          </div>
-
-          {/* Quick prompts */}
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-            {quickPrompts.map((prompt, i) => (
-              <button
-                key={i}
-                onClick={() => setAiPrompt(prompt)}
-                className="shrink-0 text-[10px] font-medium bg-white border border-violet-100 text-violet-700 px-3 py-1.5 rounded-full hover:bg-violet-50 transition-colors"
-              >
-                {prompt}
-              </button>
-            ))}
-          </div>
-
-          {/* Input area */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 space-y-3">
-            <textarea
-              value={aiPrompt}
-              onChange={e => setAiPrompt(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) handleAiRequest(); }}
-              placeholder="اكتب طلبك لتعديل أو تحسين المشروع... (Ctrl+Enter للإرسال)"
-              rows={3}
-              className="w-full text-sm text-gray-700 placeholder-gray-400 resize-none outline-none border-none bg-transparent"
-            />
-            <div className="flex items-center justify-between border-t border-gray-50 pt-2">
-              <p className="text-[9px] text-gray-300">مدعوم بـ Gemini AI</p>
-              <button
-                onClick={handleAiRequest}
-                disabled={isAiLoading || !aiPrompt.trim()}
-                className="flex items-center gap-1.5 bg-violet-600 text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {isAiLoading
-                  ? <><span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin"></span> جاري التحليل...</>
-                  : <><Icon name="auto_awesome" className="text-sm" /> اسأل الذكاء الاصطناعي</>
-                }
-              </button>
-            </div>
-          </div>
-
-          {/* AI Response */}
-          {aiError && (
-            <div className="bg-red-50 border border-red-100 rounded-2xl p-4 flex items-start gap-3">
-              <Icon name="error_outline" className="text-red-500 text-sm mt-0.5 shrink-0" />
-              <p className="text-xs text-red-600">{aiError}</p>
-            </div>
-          )}
-          {aiResponse && (
-            <div className="bg-white rounded-2xl shadow-sm border border-violet-100 p-4 space-y-2">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-6 h-6 bg-violet-100 rounded-lg flex items-center justify-center">
-                  <Icon name="auto_awesome" className="text-violet-600 text-xs" />
-                </div>
-                <p className="text-xs font-bold text-violet-700">اقتراح الذكاء الاصطناعي</p>
-              </div>
-              <p className="text-xs text-gray-700 whitespace-pre-wrap leading-relaxed">{aiResponse}</p>
-            </div>
-          )}
-        </section>
-      </main>
-
-      <BottomNav active="manager_dashboard" onSelect={onSelect} />
-    </div>
-  );
+// Page titles for the top header
+const PAGE_TITLES: Partial<Record<View, { title: string; subtitle?: string }>> = {
+  manager_dashboard:    { title: "لوحة التحكم",               subtitle: "نظرة عامة على أداء محفظتك العقارية" },
+  accounting:           { title: "المحاسبة والمالية",          subtitle: "إدارة الحسابات والتدفقات المالية" },
+  invoices:             { title: "الفواتير",                    subtitle: "إدارة وتتبع الفواتير والمدفوعات" },
+  maintenance:          { title: "الصيانة",                    subtitle: "تتبع ومتابعة طلبات الصيانة" },
+  property_details:     { title: "العقارات",                   subtitle: "إدارة وعرض تفاصيل العقارات" },
+  new_maintenance:      { title: "طلب صيانة جديد",             subtitle: "رفع طلب صيانة وإسناده للفنيين" },
+  settings:             { title: "الإعدادات",                  subtitle: "ضبط إعدادات النظام والحساب" },
+  reports:              { title: "التقارير",                   subtitle: "تقارير تحليلية وإحصائية شاملة" },
+  add_property:         { title: "إضافة عقار",                 subtitle: "تسجيل عقار جديد في المنظومة" },
+  owners:               { title: "الملاك",                     subtitle: "إدارة بيانات الملاك والمالكين" },
+  units:                { title: "الوحدات",                    subtitle: "إدارة الوحدات السكنية والتجارية" },
+  contracts:            { title: "العقود",                     subtitle: "إدارة عقود الإيجار والتجديد" },
+  support:              { title: "الدعم الفني",                subtitle: "التواصل مع فريق الدعم والمساعدة" },
+  docs:                 { title: "التوثيق الفني",               subtitle: "دليل المستخدم والمرجع التقني" },
+  notifications:        { title: "الإشعارات",                  subtitle: "متابعة آخر التنبيهات والتحديثات" },
+  financial_report:     { title: "التقارير المالية",           subtitle: "تقارير الإيرادات والمصروفات" },
+  zakat_tax:            { title: "الزكاة والضريبة",            subtitle: "متطلبات هيئة الزكاة والضريبة والدخل" },
+  ejar_integration:     { title: "منصة إيجار",                 subtitle: "التكامل مع منصة إيجار الحكومية" },
+  tech_performance:     { title: "أداء النظام",                subtitle: "مؤشرات أداء المنصة التقنية" },
+  dev_center:           { title: "مركز التطوير",               subtitle: "أدوات ومرجع المطورين" },
+  archive:              { title: "الأرشيف",                    subtitle: "الوثائق والملفات المؤرشفة" },
+  tenant_satisfaction:  { title: "رضا المستأجرين",             subtitle: "قياس وتحليل رضا المستأجرين" },
+  tenants_management:   { title: "المستأجرون",                 subtitle: "إدارة بيانات المستأجرين" },
+  vendors_management:   { title: "المقاولون والموردون",        subtitle: "إدارة المقاولين ومقدمي الخدمات" },
+  asset_management:     { title: "إدارة الأصول",               subtitle: "تتبع وصيانة أصول العقارات" },
+  property_report:      { title: "تقرير العقار",               subtitle: "تقرير تفصيلي لأداء العقار" },
+  official_print:       { title: "الطباعة الرسمية",            subtitle: "إصدار وطباعة المستندات الرسمية" },
+  publish:              { title: "النشر والتوزيع",             subtitle: "نشر التطبيق على الاستضافات المختلفة" },
+  ai_assistant:         { title: "المساعد الذكي",              subtitle: "مساعد ذكاء اصطناعي لإدارة الأملاك" },
+  payment:              { title: "المدفوعات",                  subtitle: "إدارة وتتبع المدفوعات" },
+  msg_templates:        { title: "قوالب الرسائل",              subtitle: "إنشاء وإدارة قوالب الرسائل النصية" },
+  property_forms:       { title: "نماذج العقارات",             subtitle: "نماذج وقوالب وثائق العقارات" },
 };
-
-const OwnerDashboard = ({ onSelect }: { onSelect: (v: View) => void }) => {
-  const updateMaintenanceStatus = async (id: string, status: string) => { console.log('updateMaintenanceStatus', id, status); };
-  const recordPayment = async (tenantId: string) => { console.log('recordPayment', tenantId); };
-  const owner = OWNERS[0]; // Logged-in owner (mock)
-  // Owner's properties: first 3 from PROPERTIES
-  const ownerProperties = PROPERTIES.slice(0, 3);
-
-  const ownerTenants = TENANTS.filter(t =>
-    ownerProperties.some(p => p.name === t.property)
-  );
-  const ownerContracts = CONTRACTS.filter(c =>
-    ownerProperties.some(p => p.name === c.property)
-  );
-  const ownerMaintenance = MAINTENANCE_REQUESTS.filter(r =>
-    ownerProperties.some(p => p.name === r.property)
-  );
-
-  const totalMonthlyRent = ownerTenants.reduce((s, t) => s + Number(t.rent.replace(',', '')), 0);
-  const paidCount = ownerTenants.filter(t => t.paid).length;
-  const expiringContracts = ownerContracts.filter(c => c.status === 'ينتهي قريباً');
-  const openMaintenance = ownerMaintenance.filter(r => r.status !== 'completed');
-
-  const monthlyData = [
-    { name: 'يناير', value: 38000 },
-    { name: 'فبراير', value: 41000 },
-    { name: 'مارس', value: 39500 },
-    { name: 'أبريل', value: 43000 },
-    { name: 'مايو', value: totalMonthlyRent },
-    { name: 'يونيو', value: 46000 },
-  ];
-
-  return (
-    <div className="min-h-screen bg-[#f8f8f5] pb-24">
-      {/* Header */}
-      <header className="bg-brand-dark text-white p-5 sticky top-0 z-50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Logo className="size-10" />
-            <div>
-              <h1 className="text-base font-black">{owner.name}</h1>
-              <p className="text-[10px] text-slate-400">مالك عقارات • {toArabicDigits(owner.properties)} عقار</p>
-            </div>
-          </div>
-          <button onClick={() => onSelect('welcome')} className="p-2 text-slate-400 hover:text-white transition-colors">
-            <Icon name="logout" />
-          </button>
-        </div>
-      </header>
-
-      <main className="p-4 space-y-5">
-        {/* Revenue Hero */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-brand-dark text-white p-6 rounded-3xl shadow-xl relative overflow-hidden"
-        >
-          <div className="relative z-10">
-            <p className="text-xs font-bold text-primary uppercase tracking-widest mb-1">الإيراد الشهري الإجمالي</p>
-            <h2 className="text-4xl font-black mb-4">{toArabicDigits(totalMonthlyRent.toLocaleString())} <span className="text-sm font-normal text-slate-400">ر.س</span></h2>
-            <div className="flex items-center gap-4 text-[11px]">
-              <div className="flex items-center gap-1 bg-green-500/20 text-green-400 px-3 py-1 rounded-full">
-                <Icon name="check_circle" className="text-sm" />
-                <span className="font-bold">{toArabicDigits(paidCount)} مدفوعون</span>
-              </div>
-              <div className="flex items-center gap-1 bg-amber-500/20 text-amber-400 px-3 py-1 rounded-full">
-                <Icon name="pending" className="text-sm" />
-                <span className="font-bold">{toArabicDigits(ownerTenants.length - paidCount)} معلقون</span>
-              </div>
-            </div>
-          </div>
-          <Icon name="real_estate_agent" className="absolute -bottom-4 -left-4 text-9xl opacity-5" />
-        </motion.div>
-
-        {/* Summary Stats */}
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { label: 'العقارات', value: toArabicDigits(ownerProperties.length), icon: 'apartment', bg: 'bg-blue-50', color: 'text-blue-600' },
-            { label: 'المستأجرون', value: toArabicDigits(ownerTenants.length), icon: 'group', bg: 'bg-emerald-50', color: 'text-emerald-600' },
-            { label: 'صيانة مفتوحة', value: toArabicDigits(openMaintenance.length), icon: 'build', bg: 'bg-orange-50', color: 'text-orange-600' },
-          ].map((stat, i) => (
-            <div key={i} className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center gap-1">
-              <div className={cn("size-9 rounded-xl flex items-center justify-center", stat.bg, stat.color)}>
-                <Icon name={stat.icon} className="text-lg" />
-              </div>
-              <p className="text-xl font-black text-brand-dark">{stat.value}</p>
-              <p className="text-[9px] font-bold text-slate-400">{stat.label}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Revenue Chart */}
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-          <h3 className="font-bold text-brand-dark mb-4 flex items-center gap-2">
-            <Icon name="trending_up" className="text-primary" />
-            الإيرادات الشهرية
-          </h3>
-          <div className="h-40">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={monthlyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="ownerRevGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f2cc0d" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#f2cc0d" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#9ca3af' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#9ca3af' }} />
-                <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} />
-                <Area type="monotone" dataKey="value" stroke="#f2cc0d" strokeWidth={2.5} fill="url(#ownerRevGradient)" dot={false} activeDot={{ r: 5, fill: '#f2cc0d' }} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Properties */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between px-1">
-            <h3 className="font-bold text-brand-dark">عقاراتي</h3>
-            <span className="text-[10px] font-bold text-primary">{toArabicDigits(ownerProperties.length)} عقار</span>
-          </div>
-          {ownerProperties.map(prop => {
-            const propTenants = ownerTenants.filter(t => t.property === prop.name);
-            const propRevenue = propTenants.reduce((s, t) => s + Number(t.rent.replace(',', '')), 0);
-            const propMaintenance = openMaintenance.filter(r => r.property === prop.name);
-            return (
-              <motion.div
-                key={prop.id}
-                whileHover={{ x: -4 }}
-                className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-brand-dark rounded-xl flex items-center justify-center shrink-0">
-                      <Icon name="apartment" className="text-primary text-xl" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-sm text-brand-dark">{prop.name}</h4>
-                      <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
-                        <Icon name="location_on" className="text-[10px]" />
-                        {prop.location}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-[9px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">{prop.type}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 pt-3 border-t border-gray-50">
-                  <div className="text-center">
-                    <p className="text-sm font-black text-primary">{toArabicDigits(propRevenue.toLocaleString())}</p>
-                    <p className="text-[8px] text-slate-400">ر.س/شهر</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm font-black text-brand-dark">{toArabicDigits(propTenants.length)}</p>
-                    <p className="text-[8px] text-slate-400">مستأجر</p>
-                  </div>
-                  <div className="text-center">
-                    <p className={cn("text-sm font-black", propMaintenance.length > 0 ? 'text-orange-600' : 'text-emerald-600')}>
-                      {toArabicDigits(propMaintenance.length)}
-                    </p>
-                    <p className="text-[8px] text-slate-400">صيانة</p>
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </section>
-
-        {/* Expiring Contracts Alert */}
-        {expiringContracts.length > 0 && (
-          <section className="space-y-2">
-            <h3 className="font-bold text-brand-dark flex items-center gap-2">
-              <Icon name="event_busy" className="text-amber-500" />
-              عقود تنتهي قريباً
-            </h3>
-            {expiringContracts.map(c => (
-              <div key={c.id} className="bg-amber-50 border border-amber-100 p-4 rounded-2xl flex items-center justify-between">
-                <div>
-                  <p className="font-bold text-sm text-brand-dark">{c.tenant}</p>
-                  <p className="text-[10px] text-slate-500">{c.property} — {c.unit}</p>
-                </div>
-                <div className="text-left">
-                  <p className="text-[10px] text-amber-600 font-bold">{c.end}</p>
-                  <p className="text-[9px] text-slate-400">{toArabicDigits(c.rent)} ر.س/شهر</p>
-                </div>
-              </div>
-            ))}
-          </section>
-        )}
-
-        {/* Open Maintenance */}
-        {openMaintenance.length > 0 && (
-          <section className="space-y-2">
-            <h3 className="font-bold text-brand-dark flex items-center gap-2">
-              <Icon name="build" className="text-orange-500" />
-              بلاغات الصيانة المفتوحة
-            </h3>
-            {openMaintenance.map(r => (
-              <div key={r.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center">
-                    <Icon name="build" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-sm text-brand-dark">{r.type}: {r.description.slice(0, 25)}...</p>
-                    <p className="text-[10px] text-slate-400">{r.property} — {r.unit}</p>
-                  </div>
-                </div>
-                <span className={cn("text-[9px] font-bold px-2 py-1 rounded-full", r.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700')}>
-                  {r.status === 'in_progress' ? 'قيد التنفيذ' : 'جديد'}
-                </span>
-              </div>
-            ))}
-          </section>
-        )}
-
-        {/* Quick Links */}
-        <section className="space-y-3">
-          <h3 className="font-bold text-brand-dark flex items-center gap-2">
-            <Icon name="bolt" className="text-primary" />
-            إجراءات سريعة
-          </h3>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { label: 'قوالب الرسائل', icon: 'mark_email_unread', view: 'msg_templates', bg: 'bg-indigo-50', color: 'text-indigo-600', desc: 'راسل مستأجريك' },
-              { label: 'نماذج العقارات', icon: 'description', view: 'property_forms', bg: 'bg-rose-50', color: 'text-rose-600', desc: 'استلام وإخلاء وفحص' },
-              { label: 'مركز التنبيهات', icon: 'notifications', view: 'notifications', bg: 'bg-amber-50', color: 'text-amber-600', desc: 'تتبع التنبيهات' },
-              { label: 'تقارير الأداء', icon: 'bar_chart', view: 'reports', bg: 'bg-sky-50', color: 'text-sky-600', desc: 'تقارير عقاراتك' },
-            ].map((item, i) => (
-              <motion.button
-                key={i}
-                whileHover={{ y: -3 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => onSelect(item.view as View)}
-                className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3 text-right hover:shadow-md transition-all"
-              >
-                <div className={cn("size-10 rounded-xl flex items-center justify-center shrink-0", item.bg, item.color)}>
-                  <Icon name={item.icon} className="text-lg" />
-                </div>
-                <div>
-                  <p className="text-xs font-black text-brand-dark">{item.label}</p>
-                  <p className="text-[10px] text-slate-400">{item.desc}</p>
-                </div>
-              </motion.button>
-            ))}
-          </div>
-        </section>
-      </main>
-
-      {/* Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 flex justify-around items-center py-3 pb-6 px-2 z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
-        <button className="flex flex-col items-center gap-1 text-primary relative px-3 py-1 rounded-2xl">
-          <div className="absolute inset-0 bg-primary/5 rounded-2xl" />
-          <Icon name="home" className="text-2xl relative z-10" filled />
-          <span className="text-[10px] font-black relative z-10">الرئيسية</span>
-        </button>
-        <button onClick={() => onSelect('contracts')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 px-3 py-1">
-          <Icon name="history_edu" className="text-2xl" />
-          <span className="text-[10px] font-black">العقود</span>
-        </button>
-        <button onClick={() => onSelect('accounting')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 px-3 py-1">
-          <Icon name="account_balance_wallet" className="text-2xl" />
-          <span className="text-[10px] font-black">المالية</span>
-        </button>
-        <button onClick={() => onSelect('maintenance')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 px-3 py-1">
-          <Icon name="build" className="text-2xl" />
-          <span className="text-[10px] font-black">الصيانة</span>
-        </button>
-        <button onClick={() => onSelect('msg_templates')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 px-3 py-1">
-          <Icon name="mark_email_unread" className="text-2xl" />
-          <span className="text-[10px] font-black">الرسائل</span>
-        </button>
-        <button onClick={() => onSelect('welcome')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-red-500 px-3 py-1">
-          <Icon name="logout" className="text-2xl" />
-          <span className="text-[10px] font-black">خروج</span>
-        </button>
-      </nav>
-    </div>
-  );
-};
-
-// --- Technician Portal ---
-
-const TechPortal = ({ onSelect }: { onSelect: (v: View) => void }) => {
-  const updateMaintenanceStatus = async (id: string, status: string) => { console.log('updateMaintenanceStatus', id, status); };
-  const recordPayment = async (tenantId: string) => { console.log('recordPayment', tenantId); };
-  const techName = 'أحمد محمود';
-  const [activeTab, setActiveTab] = useState<'new' | 'in_progress' | 'completed'>('new');
-  const [tasks, setTasks] = useState(MAINTENANCE_REQUESTS);
-  // Sync tasks when context data loads from DB
-  useEffect(() => { setTasks(MAINTENANCE_REQUESTS); }, [MAINTENANCE_REQUESTS]);
-
-  const myTasks = tasks.filter(t => t.technician === techName);
-  const tabCounts = {
-    new: myTasks.filter(t => t.status === 'new').length,
-    in_progress: myTasks.filter(t => t.status === 'in_progress').length,
-    completed: myTasks.filter(t => t.status === 'completed').length,
-  };
-  const filteredTasks = myTasks.filter(t => t.status === activeTab);
-
-  const priorityColor = (p: string) => {
-    if (p === 'high') return 'bg-red-100 text-red-700';
-    if (p === 'medium') return 'bg-amber-100 text-amber-700';
-    return 'bg-slate-100 text-slate-500';
-  };
-  const priorityLabel = (p: string) => p === 'high' ? 'عاجل' : p === 'medium' ? 'متوسط' : 'منخفض';
-  const typeIcon = (t: string) => {
-    const map: Record<string, string> = { 'سباكة': 'plumbing', 'كهرباء': 'electrical_services', 'تكييف': 'ac_unit', 'دهانات': 'format_paint', 'مكافحة': 'pest_control' };
-    return map[t] || 'build';
-  };
-
-  const advanceStatus = (id: string) => {
-    const next = tasks.find(t => t.id === id)?.status === 'new' ? 'in_progress' : 'completed';
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, status: next } : t));
-    updateMaintenanceStatus(id, next); // persist to SQLite
-  };
-
-  const tabs: { key: 'new' | 'in_progress' | 'completed'; label: string }[] = [
-    { key: 'new', label: 'جديد' },
-    { key: 'in_progress', label: 'قيد التنفيذ' },
-    { key: 'completed', label: 'مكتمل' },
-  ];
-
-  return (
-    <div className="min-h-screen bg-[#f8f8f5] pb-24">
-      {/* Header */}
-      <header className="bg-brand-dark text-white p-5 sticky top-0 z-50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="size-12 gold-gradient rounded-full flex items-center justify-center text-brand-dark font-black text-xl shadow-lg">
-              {techName[0]}
-            </div>
-            <div>
-              <h1 className="text-base font-black">{techName}</h1>
-              <p className="text-[10px] text-slate-400">فني صيانة • رمز الإبداع</p>
-            </div>
-          </div>
-          <button onClick={() => onSelect('welcome')} className="p-2 text-slate-400 hover:text-white transition-colors">
-            <Icon name="logout" />
-          </button>
-        </div>
-      </header>
-
-      {/* Stats row */}
-      <div className="bg-white border-b border-slate-100 px-4 py-4">
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { label: 'جديد', count: tabCounts.new, icon: 'inbox', color: 'text-blue-600', bg: 'bg-blue-50' },
-            { label: 'قيد التنفيذ', count: tabCounts.in_progress, icon: 'construction', color: 'text-amber-600', bg: 'bg-amber-50' },
-            { label: 'مكتمل', count: tabCounts.completed, icon: 'task_alt', color: 'text-emerald-600', bg: 'bg-emerald-50' },
-          ].map((stat, i) => (
-            <div key={i} className="flex flex-col items-center gap-1 p-2 rounded-2xl bg-slate-50">
-              <div className={cn("size-8 rounded-xl flex items-center justify-center", stat.bg, stat.color)}>
-                <Icon name={stat.icon} className="text-base" />
-              </div>
-              <p className="text-lg font-black text-brand-dark">{toArabicDigits(stat.count)}</p>
-              <p className="text-[9px] font-bold text-slate-400">{stat.label}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Tab bar */}
-      <div className="flex gap-2 px-4 py-3 bg-white sticky top-[73px] z-40 border-b border-slate-100">
-        {tabs.map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={cn(
-              "flex-1 py-2 rounded-xl text-xs font-bold transition-all",
-              activeTab === tab.key ? "bg-brand-dark text-white shadow-md" : "bg-slate-50 text-slate-500 hover:bg-slate-100"
-            )}
-          >
-            {tab.label}
-            {tabCounts[tab.key] > 0 && (
-              <span className={cn("mr-1 inline-block text-[9px] font-black px-1 rounded-full", activeTab === tab.key ? 'bg-white/20' : 'bg-slate-200')}>
-                {toArabicDigits(tabCounts[tab.key])}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      <main className="p-4 space-y-3">
-        <AnimatePresence mode="popLayout">
-          {filteredTasks.map(task => (
-            <motion.div
-              key={task.id}
-              layout
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-primary shrink-0">
-                    <Icon name={typeIcon(task.type)} className="text-xl" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-brand-dark">{task.type}</h4>
-                    <p className="text-[10px] text-slate-400">{task.property} — {task.unit}</p>
-                    <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
-                      <Icon name="calendar_today" className="text-[10px]" />
-                      {task.date}
-                    </p>
-                  </div>
-                </div>
-                <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0", priorityColor(task.priority))}>
-                  {priorityLabel(task.priority)}
-                </span>
-              </div>
-
-              <p className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl mb-3 leading-relaxed">{task.description}</p>
-
-              {task.status !== 'completed' && (
-                <button
-                  onClick={() => advanceStatus(task.id)}
-                  className={cn(
-                    "w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all",
-                    task.status === 'new'
-                      ? "bg-primary/10 text-primary hover:bg-primary hover:text-brand-dark"
-                      : "bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white"
-                  )}
-                >
-                  <Icon name={task.status === 'new' ? 'play_circle' : 'check_circle'} className="text-sm" />
-                  {task.status === 'new' ? 'بدء التنفيذ' : 'تحديد كمكتمل'}
-                </button>
-              )}
-              {task.status === 'completed' && (
-                <div className="flex items-center justify-center gap-2 text-emerald-600 text-xs font-bold py-2 bg-emerald-50 rounded-xl">
-                  <Icon name="task_alt" className="text-sm" />
-                  تم الإنجاز
-                </div>
-              )}
-            </motion.div>
-          ))}
-        </AnimatePresence>
-
-        {filteredTasks.length === 0 && (
-          <div className="py-16 text-center">
-            <Icon name="check_circle" className="text-5xl text-slate-200 mb-3" />
-            <p className="text-slate-400 font-bold">لا توجد مهام في هذه الفئة</p>
-          </div>
-        )}
-      </main>
-
-      {/* Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 flex justify-around items-center py-3 pb-6 px-2 z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
-        <button className="flex flex-col items-center gap-1 text-primary relative px-3 py-1 rounded-2xl">
-          <div className="absolute inset-0 bg-primary/5 rounded-2xl" />
-          <Icon name="home" className="text-2xl relative z-10" filled />
-          <span className="text-[10px] font-black relative z-10">المهام</span>
-        </button>
-        <button onClick={() => onSelect('new_maintenance')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 px-3 py-1">
-          <Icon name="add_circle" className="text-2xl" />
-          <span className="text-[10px] font-black">طلب جديد</span>
-        </button>
-        <button onClick={() => onSelect('support')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 px-3 py-1">
-          <Icon name="support_agent" className="text-2xl" />
-          <span className="text-[10px] font-black">الدعم</span>
-        </button>
-        <button onClick={() => onSelect('welcome')} className="flex flex-col items-center gap-1 text-slate-400 hover:text-red-500 px-3 py-1">
-          <Icon name="logout" className="text-2xl" />
-          <span className="text-[10px] font-black">خروج</span>
-        </button>
-      </nav>
-    </div>
-  );
-};
-
-// --- Payment Screen ---
-
-const PaymentScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
-  const updateMaintenanceStatus = async (id: string, status: string) => { console.log('updateMaintenanceStatus', id, status); };
-  const recordPayment = async (tenantId: string) => { console.log('recordPayment', tenantId); };
-  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(false);
-
-  const paymentMethods = [
-    { id: 'mada', label: 'مدى', icon: 'credit_card', desc: 'بطاقة مدى المصرفية' },
-    { id: 'sadad', label: 'سداد', icon: 'account_balance', desc: 'خدمة سداد للمدفوعات' },
-    { id: 'transfer', label: 'تحويل بنكي', icon: 'send_money', desc: 'تحويل مباشر للحساب' },
-  ];
-
-  const paymentHistory = [
-    { date: '٢٠٢٤/٠٥/٠١', amount: '٤,٨٠٠', method: 'مدى', status: 'مكتمل' },
-    { date: '٢٠٢٤/٠٤/٠١', amount: '٤,٨٠٠', method: 'سداد', status: 'مكتمل' },
-    { date: '٢٠٢٤/٠٣/٠١', amount: '٤,٨٠٠', method: 'مدى', status: 'مكتمل' },
-  ];
-
-  return (
-    <div className="min-h-screen bg-[#FDFDFD] pb-24">
-      <header className="flex items-center bg-brand-dark px-6 py-5 justify-between sticky top-0 z-30 shadow-xl">
-        <button onClick={() => onSelect('tenant_dashboard')} className="flex size-10 items-center justify-center rounded-xl bg-white/5 text-white hover:bg-white/10 transition-all">
-          <Icon name="arrow_forward" className="text-2xl" />
-        </button>
-        <h2 className="text-lg font-black text-white">دفع الإيجار</h2>
-        <div className="size-10" />
-      </header>
-
-      <main className="p-6 space-y-6">
-        {submitted ? (
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="flex flex-col items-center justify-center gap-6 pt-12 text-center"
-          >
-            <div className="size-24 gold-gradient rounded-full flex items-center justify-center shadow-2xl shadow-primary/30">
-              <Icon name="check_circle" className="text-5xl text-brand-dark" filled />
-            </div>
-            <div>
-              <h3 className="text-2xl font-black text-brand-dark mb-2">تم الدفع بنجاح!</h3>
-              <p className="text-sm text-slate-500 font-bold">تم تحصيل دفعة الإيجار لشهر يونيو ٢٠٢٤</p>
-            </div>
-            <div className="w-full bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 text-right space-y-3">
-              {[
-                { label: 'المبلغ', value: '٤,٨٠٠ ر.س' },
-                { label: 'طريقة الدفع', value: paymentMethods.find(m => m.id === selectedMethod)?.label ?? '' },
-                { label: 'التاريخ', value: '٢٠٢٤/٠٦/٠١' },
-                { label: 'رقم العملية', value: '#TXN-٢٠٢٤٠٦٠١' },
-              ].map((item, i) => (
-                <div key={i} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
-                  <span className="text-xs font-bold text-slate-500">{item.label}:</span>
-                  <span className="text-xs font-black text-brand-dark">{item.value}</span>
-                </div>
-              ))}
-            </div>
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              onClick={() => onSelect('tenant_dashboard')}
-              className="w-full py-4 gold-gradient rounded-2xl text-brand-dark font-black text-base shadow-lg shadow-primary/20"
-            >
-              العودة للرئيسية
-            </motion.button>
-          </motion.div>
-        ) : (
-          <>
-            {/* بطاقة تفاصيل الدفعة */}
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="w-full rounded-[2.5rem] p-8 dark-gradient text-white shadow-2xl relative overflow-hidden border border-white/5"
-            >
-              <div className="absolute top-0 right-0 w-48 h-48 gold-gradient opacity-10 rounded-full -mr-24 -mt-24 blur-3xl"></div>
-              <div className="relative z-10 flex flex-col gap-3">
-                <div className="flex items-center gap-3 text-primary">
-                  <div className="size-8 bg-primary/20 rounded-lg flex items-center justify-center">
-                    <Icon name="payments" className="text-lg" filled />
-                  </div>
-                  <p className="text-xs font-black uppercase tracking-[0.2em]">الدفعة المستحقة</p>
-                </div>
-                <h3 className="text-5xl font-black tracking-tighter mt-1">٤,٨٠٠ <span className="text-xl font-bold text-primary/60">ر.س</span></h3>
-                <div className="mt-2 grid grid-cols-2 gap-3">
-                  {[
-                    { label: 'الوحدة', value: 'شقة ٤٠٢' },
-                    { label: 'تاريخ الاستحقاق', value: '٢٠٢٤/٠٦/٠١' },
-                    { label: 'العقار', value: 'برج الياسمين' },
-                    { label: 'الشهر', value: 'يونيو ٢٠٢٤' },
-                  ].map((item, i) => (
-                    <div key={i} className="bg-white/5 rounded-xl p-3 border border-white/10">
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">{item.label}</p>
-                      <p className="text-sm font-black text-white">{item.value}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-
-            {/* طريقة الدفع */}
-            <section className="space-y-4">
-              <h3 className="text-base font-black text-brand-dark flex items-center gap-2">
-                <span className="size-1.5 bg-primary rounded-full"></span> اختر طريقة الدفع
-              </h3>
-              <div className="space-y-3">
-                {paymentMethods.map((method) => (
-                  <motion.button
-                    key={method.id}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setSelectedMethod(method.id)}
-                    className={cn(
-                      "w-full flex items-center gap-4 p-5 rounded-2xl border-2 transition-all text-right",
-                      selectedMethod === method.id
-                        ? "border-primary bg-primary/5 shadow-md shadow-primary/10"
-                        : "border-slate-100 bg-white hover:border-slate-200"
-                    )}
-                  >
-                    <div className={cn(
-                      "size-12 rounded-xl flex items-center justify-center transition-all",
-                      selectedMethod === method.id ? "gold-gradient text-brand-dark" : "bg-slate-50 text-slate-400"
-                    )}>
-                      <Icon name={method.icon} className="text-xl" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-black text-brand-dark">{method.label}</p>
-                      <p className="text-xs text-slate-400 font-bold mt-0.5">{method.desc}</p>
-                    </div>
-                    {selectedMethod === method.id && (
-                      <div className="size-6 rounded-full gold-gradient flex items-center justify-center">
-                        <Icon name="check" className="text-sm text-brand-dark" />
-                      </div>
-                    )}
-                  </motion.button>
-                ))}
-              </div>
-            </section>
-
-            {/* زر الدفع */}
-            <motion.button
-              whileHover={{ y: -2 }}
-              whileTap={{ scale: 0.97 }}
-              disabled={!selectedMethod}
-              onClick={() => { if (!selectedMethod) return; setSubmitted(true); recordPayment('1'); /* tenant id=1 is mock logged-in tenant */ }}
-              className={cn(
-                "w-full py-4 rounded-2xl font-black text-base transition-all shadow-lg",
-                selectedMethod
-                  ? "gold-gradient text-brand-dark shadow-primary/20"
-                  : "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
-              )}
-            >
-              {selectedMethod ? `ادفع ٤,٨٠٠ ر.س عبر ${paymentMethods.find(m => m.id === selectedMethod)?.label}` : 'اختر طريقة الدفع أولاً'}
-            </motion.button>
-
-            {/* سجل المدفوعات */}
-            <section className="space-y-4">
-              <h3 className="text-base font-black text-brand-dark flex items-center gap-2">
-                <span className="size-1.5 bg-primary rounded-full"></span> سجل المدفوعات
-              </h3>
-              <div className="space-y-3">
-                {paymentHistory.map((payment, i) => (
-                  <div key={i} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="size-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600">
-                        <Icon name="check_circle" className="text-lg" filled />
-                      </div>
-                      <div>
-                        <p className="text-sm font-black text-brand-dark">{payment.amount} ر.س</p>
-                        <p className="text-xs text-slate-400 font-bold mt-0.5">{payment.date} • {payment.method}</p>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-black px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full">{payment.status}</span>
-                  </div>
-                ))}
-              </div>
-            </section>
-          </>
-        )}
-      </main>
-    </div>
-  );
-};
-
-// --- Message Templates Screen ---
-
-const MessageTemplatesScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
-  const [activeCategory, setActiveCategory] = useState('الكل');
-  const [sendModal, setSendModal] = useState<typeof MSG_TEMPLATES[0] | null>(null);
-  const [previewModal, setPreviewModal] = useState<typeof MSG_TEMPLATES[0] | null>(null);
-  const [sendSuccess, setSendSuccess] = useState(false);
-  const [selectedRecipient, setSelectedRecipient] = useState('');
-  const [selectedChannel, setSelectedChannel] = useState('SMS');
-
-  const categories = ['الكل', 'عقود', 'مالية', 'صيانة', 'عام'];
-  const filtered = activeCategory === 'الكل' ? MSG_TEMPLATES : MSG_TEMPLATES.filter(t => t.category === activeCategory);
-
-  const recipientBadge = (r: string) => {
-    if (r === 'مستأجر') return 'bg-blue-50 text-blue-600';
-    if (r === 'مالك') return 'bg-emerald-50 text-emerald-600';
-    return 'bg-slate-100 text-slate-500';
-  };
-
-  const handleSend = () => {
-    setSendSuccess(true);
-    setTimeout(() => {
-      setSendSuccess(false);
-      setSendModal(null);
-      setSelectedRecipient('');
-      setSelectedChannel('SMS');
-    }, 1800);
-  };
-
-  const categoryCount = (cat: string) => cat === 'الكل'
-    ? MSG_TEMPLATES.length
-    : MSG_TEMPLATES.filter(t => t.category === cat).length;
-
-  return (
-    <div className="min-h-screen bg-[#f8f8f5] pb-24">
-      <header className="flex items-center justify-between p-4 bg-brand-dark sticky top-0 z-30 shadow-xl">
-        <button onClick={() => onSelect('manager_dashboard')} className="flex size-10 items-center justify-center rounded-xl bg-white/5 text-white hover:bg-white/10 transition-all">
-          <Icon name="arrow_forward" className="text-2xl" />
-        </button>
-        <div className="text-center">
-          <h2 className="text-base font-black text-white">قوالب الرسائل الآلية</h2>
-          <p className="text-[10px] text-primary font-bold">{toArabicDigits(MSG_TEMPLATES.length)} قالب جاهز</p>
-        </div>
-        <div className="flex size-10 items-center justify-center rounded-xl gold-gradient text-brand-dark shadow-lg shadow-primary/20">
-          <Icon name="mail_outline" className="text-xl" />
-        </div>
-      </header>
-
-      <main className="p-4 space-y-5">
-        {/* Stats */}
-        <div className="grid grid-cols-4 gap-2">
-          {[
-            { label: 'العقود', count: MSG_TEMPLATES.filter(t => t.category === 'عقود').length, icon: 'history_edu', color: 'text-blue-600', bg: 'bg-blue-50' },
-            { label: 'المالية', count: MSG_TEMPLATES.filter(t => t.category === 'مالية').length, icon: 'payments', color: 'text-rose-600', bg: 'bg-rose-50' },
-            { label: 'الصيانة', count: MSG_TEMPLATES.filter(t => t.category === 'صيانة').length, icon: 'build', color: 'text-orange-600', bg: 'bg-orange-50' },
-            { label: 'عام', count: MSG_TEMPLATES.filter(t => t.category === 'عام').length, icon: 'campaign', color: 'text-purple-600', bg: 'bg-purple-50' },
-          ].map((s, i) => (
-            <div key={i} className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center gap-1.5">
-              <div className={cn("size-8 rounded-xl flex items-center justify-center", s.bg, s.color)}>
-                <Icon name={s.icon} className="text-base" />
-              </div>
-              <p className="text-lg font-black text-brand-dark">{toArabicDigits(s.count)}</p>
-              <p className="text-[9px] font-bold text-slate-400">{s.label}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Auto notice */}
-        <div className="bg-primary/10 border border-primary/20 p-3 rounded-xl flex items-center gap-3">
-          <div className="size-8 bg-primary/20 rounded-lg flex items-center justify-center shrink-0 text-primary">
-            <Icon name="auto_mode" className="text-base" />
-          </div>
-          <p className="text-xs font-bold text-brand-dark">القوالب المميزة بـ <span className="text-primary">آلي</span> تُرسَل تلقائياً عند تحقق الشرط (انتهاء عقد، تأخر سداد، إلخ)</p>
-        </div>
-
-        {/* Category tabs */}
-        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={cn(
-                "whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5",
-                activeCategory === cat
-                  ? 'bg-brand-dark text-white shadow-md'
-                  : 'bg-white border border-gray-100 text-gray-500 hover:bg-slate-50'
-              )}
-            >
-              {cat}
-              <span className={cn("text-[9px] font-black px-1.5 py-0.5 rounded-full", activeCategory === cat ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500')}>
-                {toArabicDigits(categoryCount(cat))}
-              </span>
-            </button>
-          ))}
-        </div>
-
-        {/* Templates list */}
-        <AnimatePresence mode="popLayout">
-          {filtered.map((tmpl) => (
-            <motion.div
-              key={tmpl.id}
-              layout
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
-            >
-              <div className="p-4">
-                <div className="flex items-start gap-3 mb-3">
-                  <div className={cn("size-11 rounded-xl flex items-center justify-center shrink-0", tmpl.bg, tmpl.color)}>
-                    <Icon name={tmpl.icon} className="text-xl" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <h4 className="font-black text-sm text-brand-dark">{tmpl.title}</h4>
-                      {tmpl.auto && (
-                        <span className="text-[8px] font-black bg-primary/10 text-primary px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
-                          <Icon name="auto_mode" className="text-[10px]" /> آلي
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={cn("text-[9px] font-black px-2 py-0.5 rounded-full", recipientBadge(tmpl.recipient))}>
-                        {tmpl.recipient}
-                      </span>
-                      <span className="text-[9px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">{tmpl.category}</span>
-                    </div>
-                  </div>
-                </div>
-                <p className="text-[11px] text-slate-500 leading-relaxed line-clamp-2 bg-slate-50 p-2 rounded-lg">{tmpl.preview}</p>
-              </div>
-              <div className="border-t border-gray-50 grid grid-cols-2 divide-x divide-gray-50">
-                <button
-                  onClick={() => setPreviewModal(tmpl)}
-                  className="py-3 text-xs font-bold text-slate-500 flex items-center justify-center gap-1.5 hover:bg-slate-50 transition-colors"
-                >
-                  <Icon name="visibility" className="text-sm" /> معاينة كاملة
-                </button>
-                <button
-                  onClick={() => setSendModal(tmpl)}
-                  className={cn("py-3 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors", tmpl.color, "hover:opacity-80")}
-                >
-                  <Icon name="send" className="text-sm" /> إرسال
-                </button>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </main>
-
-      {/* Preview Modal */}
-      <AnimatePresence>
-        {previewModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center p-4"
-            onClick={() => setPreviewModal(null)}
-          >
-            <motion.div
-              initial={{ y: 80, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 80, opacity: 0 }}
-              onClick={e => e.stopPropagation()}
-              className="bg-white rounded-3xl w-full max-w-lg p-6 shadow-2xl"
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <div className={cn("size-12 rounded-xl flex items-center justify-center", previewModal.bg, previewModal.color)}>
-                  <Icon name={previewModal.icon} className="text-2xl" />
-                </div>
-                <div>
-                  <h3 className="font-black text-brand-dark">{previewModal.title}</h3>
-                  <div className="flex gap-2 mt-1">
-                    <span className={cn("text-[9px] font-black px-2 py-0.5 rounded-full", recipientBadge(previewModal.recipient))}>{previewModal.recipient}</span>
-                    <span className="text-[9px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">{previewModal.category}</span>
-                    {previewModal.auto && <span className="text-[9px] font-black bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">آلي</span>}
-                  </div>
-                </div>
-              </div>
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-4">
-                <p className="text-sm text-slate-600 leading-loose font-medium">{previewModal.preview}</p>
-              </div>
-              <p className="text-[10px] text-slate-400 text-center mb-4">القيم داخل [الأقواس] ستُعوَّض تلقائياً بالبيانات الفعلية عند الإرسال</p>
-              <div className="grid grid-cols-2 gap-3">
-                <button onClick={() => setPreviewModal(null)} className="py-3 rounded-xl border border-gray-200 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-colors">إغلاق</button>
-                <button onClick={() => { setPreviewModal(null); setSendModal(previewModal); }} className={cn("py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 shadow-lg", "bg-brand-dark")}>
-                  <Icon name="send" className="text-sm" /> إرسال الآن
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Send Modal */}
-      <AnimatePresence>
-        {sendModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center p-4"
-            onClick={() => { if (!sendSuccess) setSendModal(null); }}
-          >
-            <motion.div
-              initial={{ y: 80, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 80, opacity: 0 }}
-              onClick={e => e.stopPropagation()}
-              className="bg-white rounded-3xl w-full max-w-lg p-6 shadow-2xl"
-            >
-              {sendSuccess ? (
-                <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex flex-col items-center py-6 text-center">
-                  <div className="size-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4">
-                    <Icon name="check_circle" className="text-5xl" />
-                  </div>
-                  <h3 className="text-xl font-black text-brand-dark mb-1">تم الإرسال بنجاح!</h3>
-                  <p className="text-sm text-slate-500">تم إرسال الرسالة إلى المستلمين المحددين</p>
-                </motion.div>
-              ) : (
-                <>
-                  <h3 className="font-black text-brand-dark text-lg mb-1">إرسال الرسالة</h3>
-                  <p className="text-xs text-slate-400 mb-5">{sendModal.title}</p>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-xs font-bold text-slate-600 mb-2 block">اختر المستلمين</label>
-                      <div className="space-y-2">
-                        {sendModal.recipient === 'الجميع' ? (
-                          ['جميع المستأجرين', 'جميع الملاك', 'مستأجرو عقار محدد', 'مستأجر واحد'].map((opt) => (
-                            <button key={opt} onClick={() => setSelectedRecipient(opt)} className={cn("w-full p-3 rounded-xl border text-sm font-bold text-right transition-all", selectedRecipient === opt ? 'border-primary bg-primary/5 text-primary' : 'border-gray-100 text-slate-600 hover:bg-slate-50')}>
-                              {opt}
-                            </button>
-                          ))
-                        ) : sendModal.recipient === 'مستأجر' ? (
-                          ['جميع المستأجرين', 'مستأجرو عقار محدد', 'مستأجر واحد محدد'].map((opt) => (
-                            <button key={opt} onClick={() => setSelectedRecipient(opt)} className={cn("w-full p-3 rounded-xl border text-sm font-bold text-right transition-all", selectedRecipient === opt ? 'border-primary bg-primary/5 text-primary' : 'border-gray-100 text-slate-600 hover:bg-slate-50')}>
-                              {opt}
-                            </button>
-                          ))
-                        ) : (
-                          ['جميع الملاك', 'مالك محدد'].map((opt) => (
-                            <button key={opt} onClick={() => setSelectedRecipient(opt)} className={cn("w-full p-3 rounded-xl border text-sm font-bold text-right transition-all", selectedRecipient === opt ? 'border-primary bg-primary/5 text-primary' : 'border-gray-100 text-slate-600 hover:bg-slate-50')}>
-                              {opt}
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-slate-600 mb-2 block">قناة الإرسال</label>
-                      <div className="flex gap-2">
-                        {[{ label: 'SMS', icon: 'sms' }, { label: 'بريد', icon: 'email' }, { label: 'إشعار', icon: 'notifications' }].map((ch) => (
-                          <button key={ch.label} onClick={() => setSelectedChannel(ch.label)} className={cn("flex-1 py-2.5 rounded-xl border text-xs font-bold flex flex-col items-center gap-1 transition-all", selectedChannel === ch.label ? 'border-primary bg-primary/5 text-primary' : 'border-gray-100 text-slate-600 hover:border-primary hover:text-primary hover:bg-primary/5')}>
-                            <Icon name={ch.icon} className="text-base" />
-                            {ch.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 mt-6">
-                    <button onClick={() => setSendModal(null)} className="py-3 rounded-xl border border-gray-200 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-colors">إلغاء</button>
-                    <button
-                      disabled={!selectedRecipient}
-                      onClick={handleSend}
-                      className={cn("py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 shadow-lg transition-all", selectedRecipient ? "bg-brand-dark shadow-brand-dark/20 hover:opacity-90" : "bg-slate-300 cursor-not-allowed")}
-                    >
-                      <Icon name="send" className="text-sm" /> إرسال
-                    </button>
-                  </div>
-                </>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <BottomNav active="manager_dashboard" onSelect={onSelect} />
-    </div>
-  );
-};
-
-// --- Property Forms Screen ---
-
-const PropertyFormsScreen = ({ onSelect, initialCategory = 'الكل' }: { onSelect: (v: View) => void; initialCategory?: string }) => {
-  const [activeCategory, setActiveCategory] = useState(initialCategory);
-  const [openForm, setOpenForm] = useState<typeof PROPERTY_FORMS[0] | null>(null);
-  const [formValues, setFormValues] = useState<Record<string, string>>({});
-  const [submitSuccess, setSubmitSuccess] = useState(false);
-
-  const categories = ['الكل', 'عقارات', 'مالية', 'صيانة', 'خدمات'];
-  const filtered = activeCategory === 'الكل' ? PROPERTY_FORMS : PROPERTY_FORMS.filter(f => f.category === activeCategory);
-
-  const categoryBadgeStyle = (cat: string) => {
-    if (cat === 'عقارات') return 'bg-blue-50 text-blue-600';
-    if (cat === 'مالية') return 'bg-emerald-50 text-emerald-600';
-    if (cat === 'صيانة') return 'bg-orange-50 text-orange-600';
-    return 'bg-purple-50 text-purple-600';
-  };
-
-  const handleSubmitForm = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitSuccess(true);
-    setTimeout(() => {
-      setSubmitSuccess(false);
-      setOpenForm(null);
-      setFormValues({});
-    }, 1800);
-  };
-
-  return (
-    <div className="min-h-screen bg-[#f8f8f5] pb-24">
-      <header className="flex items-center justify-between p-4 bg-brand-dark sticky top-0 z-30 shadow-xl">
-        <button onClick={() => onSelect('manager_dashboard')} className="flex size-10 items-center justify-center rounded-xl bg-white/5 text-white hover:bg-white/10 transition-all">
-          <Icon name="arrow_forward" className="text-2xl" />
-        </button>
-        <div className="text-center">
-          <h2 className="text-base font-black text-white">نماذج وإشعارات العقارات</h2>
-          <p className="text-[10px] text-primary font-bold">{toArabicDigits(PROPERTY_FORMS.length)} نماذج جاهزة</p>
-        </div>
-        <div className="flex size-10 items-center justify-center rounded-xl gold-gradient text-brand-dark shadow-lg shadow-primary/20">
-          <Icon name="description" className="text-xl" />
-        </div>
-      </header>
-
-      <main className="p-4 space-y-5">
-        {/* Stats row */}
-        <div className="grid grid-cols-4 gap-2">
-          {[
-            { label: 'عقارات', count: PROPERTY_FORMS.filter(f => f.category === 'عقارات').length, icon: 'apartment', color: 'text-blue-600', bg: 'bg-blue-50' },
-            { label: 'مالية', count: PROPERTY_FORMS.filter(f => f.category === 'مالية').length, icon: 'payments', color: 'text-emerald-600', bg: 'bg-emerald-50' },
-            { label: 'صيانة', count: PROPERTY_FORMS.filter(f => f.category === 'صيانة').length, icon: 'build', color: 'text-orange-600', bg: 'bg-orange-50' },
-            { label: 'خدمات', count: PROPERTY_FORMS.filter(f => f.category === 'خدمات').length, icon: 'star', color: 'text-purple-600', bg: 'bg-purple-50' },
-          ].map((s, i) => (
-            <div key={i} className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center gap-1.5">
-              <div className={cn("size-8 rounded-xl flex items-center justify-center", s.bg, s.color)}>
-                <Icon name={s.icon} className="text-base" />
-              </div>
-              <p className="text-lg font-black text-brand-dark">{toArabicDigits(s.count)}</p>
-              <p className="text-[9px] font-bold text-slate-400">{s.label}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Category tabs */}
-        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={cn(
-                "whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all",
-                activeCategory === cat
-                  ? 'bg-brand-dark text-white shadow-md'
-                  : 'bg-white border border-gray-100 text-gray-500 hover:bg-slate-50'
-              )}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-
-        {/* Forms list */}
-        <AnimatePresence mode="popLayout">
-          {filtered.map((form) => (
-            <motion.div
-              key={form.id}
-              layout
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
-            >
-              <div className="p-4 flex items-start gap-4">
-                <div className={cn("size-12 rounded-2xl flex items-center justify-center shrink-0", form.bg, form.color)}>
-                  <Icon name={form.icon} className="text-2xl" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-start justify-between gap-2 mb-1">
-                    <h4 className="font-black text-sm text-brand-dark leading-snug">{form.title}</h4>
-                    <span className={cn("text-[9px] font-black px-2 py-0.5 rounded-full shrink-0", categoryBadgeStyle(form.category))}>{form.category}</span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 font-medium mb-2">{form.desc}</p>
-                  <div className="flex items-center gap-1 flex-wrap">
-                    <span className="text-[9px] text-slate-400 font-bold">الحقول:</span>
-                    {form.fields.slice(0, 3).map((f, i) => (
-                      <span key={i} className="text-[9px] bg-slate-50 text-slate-500 font-bold px-1.5 py-0.5 rounded-md">{f.label}</span>
-                    ))}
-                    {form.fields.length > 3 && <span className="text-[9px] text-slate-400 font-bold">+{form.fields.length - 3} أخرى</span>}
-                  </div>
-                </div>
-              </div>
-              <div className="border-t border-gray-50 grid grid-cols-2 divide-x divide-gray-50">
-                <button
-                  onClick={() => { setOpenForm(form); setFormValues({}); setSubmitSuccess(false); }}
-                  className="py-3 text-xs font-bold text-primary flex items-center justify-center gap-1.5 hover:bg-primary/5 transition-colors"
-                >
-                  <Icon name="edit_document" className="text-sm" /> تعبئة النموذج
-                </button>
-                <button onClick={() => window.print()} className="py-3 text-xs font-bold text-slate-500 flex items-center justify-center gap-1.5 hover:bg-slate-50 transition-colors">
-                  <Icon name="print" className="text-sm" /> طباعة فارغ
-                </button>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </main>
-
-      {/* Form Fill Modal */}
-      <AnimatePresence>
-        {openForm && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center"
-            onClick={() => { if (!submitSuccess) setOpenForm(null); }}
-          >
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 250 }}
-              onClick={e => e.stopPropagation()}
-              className="bg-white rounded-t-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
-            >
-              {submitSuccess ? (
-                <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex flex-col items-center py-16 text-center px-6">
-                  <div className="size-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-6">
-                    <Icon name="check_circle" className="text-6xl" />
-                  </div>
-                  <h3 className="text-2xl font-black text-brand-dark mb-2">تم الحفظ!</h3>
-                  <p className="text-sm text-slate-500">تم حفظ النموذج وإرساله بنجاح</p>
-                </motion.div>
-              ) : (
-                <>
-                  <div className="sticky top-0 bg-white border-b border-gray-100 p-5 flex items-center gap-3">
-                    <div className={cn("size-10 rounded-xl flex items-center justify-center", openForm.bg, openForm.color)}>
-                      <Icon name={openForm.icon} className="text-xl" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-black text-brand-dark text-sm">{openForm.title}</h3>
-                      <p className="text-[10px] text-slate-400">{openForm.fields.length} حقول</p>
-                    </div>
-                    <button onClick={() => setOpenForm(null)} className="size-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors">
-                      <Icon name="close" className="text-base" />
-                    </button>
-                  </div>
-
-                  <form onSubmit={handleSubmitForm} className="p-5 space-y-4">
-                    {/* Property & unit selectors */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="flex flex-col gap-1">
-                        <label className="text-xs font-bold text-slate-600">العقار</label>
-                        <select className="w-full rounded-xl border border-gray-200 bg-slate-50 py-2.5 px-3 text-sm outline-none focus:ring-2 focus:ring-primary transition-all">
-                          <option value="">اختر العقار</option>
-                          {PROPERTIES.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                        </select>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <label className="text-xs font-bold text-slate-600">الوحدة</label>
-                        <select className="w-full rounded-xl border border-gray-200 bg-slate-50 py-2.5 px-3 text-sm outline-none focus:ring-2 focus:ring-primary transition-all">
-                          <option value="">اختر الوحدة</option>
-                          {UNITS.map(u => <option key={u.id} value={u.id}>{u.id} - {u.type}</option>)}
-                        </select>
-                      </div>
-                    </div>
-
-                    {openForm.fields.map((field, i) => (
-                      <div key={i} className="flex flex-col gap-1">
-                        <label className="text-xs font-bold text-slate-600">{field.label}</label>
-                        {field.type === 'select' ? (
-                          <select
-                            className="w-full rounded-xl border border-gray-200 bg-slate-50 py-2.5 px-3 text-sm outline-none focus:ring-2 focus:ring-primary transition-all"
-                            value={formValues[field.label] || ''}
-                            onChange={e => setFormValues(prev => ({ ...prev, [field.label]: e.target.value }))}
-                          >
-                            <option value="">اختر...</option>
-                            {(field.options || []).map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
-                          </select>
-                        ) : field.type === 'textarea' ? (
-                          <textarea
-                            rows={3}
-                            className="w-full rounded-xl border border-gray-200 bg-slate-50 py-2.5 px-3 text-sm outline-none focus:ring-2 focus:ring-primary transition-all resize-none"
-                            placeholder={`أدخل ${field.label}...`}
-                            value={formValues[field.label] || ''}
-                            onChange={e => setFormValues(prev => ({ ...prev, [field.label]: e.target.value }))}
-                          />
-                        ) : field.type === 'file' ? (
-                          <div className="w-full h-24 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center text-gray-400 bg-slate-50 cursor-pointer hover:bg-gray-50 transition-colors">
-                            <Icon name="attach_file" className="text-2xl mb-1" />
-                            <span className="text-xs font-bold">اضغط لإرفاق الملف</span>
-                          </div>
-                        ) : (
-                          <input
-                            type={field.type}
-                            className="w-full rounded-xl border border-gray-200 bg-slate-50 py-2.5 px-3 text-sm outline-none focus:ring-2 focus:ring-primary transition-all"
-                            placeholder={`أدخل ${field.label}...`}
-                            value={formValues[field.label] || ''}
-                            onChange={e => setFormValues(prev => ({ ...prev, [field.label]: e.target.value }))}
-                          />
-                        )}
-                      </div>
-                    ))}
-
-                    <div className="pt-2 grid grid-cols-2 gap-3">
-                      <button type="button" onClick={() => setOpenForm(null)} className="py-3 rounded-xl border border-gray-200 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-colors">إلغاء</button>
-                      <button type="submit" className="py-3 rounded-xl bg-brand-dark text-white text-sm font-bold shadow-lg shadow-brand-dark/20 hover:opacity-90 transition-all flex items-center justify-center gap-2">
-                        <Icon name="save" className="text-sm" /> حفظ وإرسال
-                      </button>
-                    </div>
-                  </form>
-                </>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <BottomNav active="manager_dashboard" onSelect={onSelect} />
-    </div>
-  );
-};
-
-// --- Main App ---
-
-// --- App Data Provider ---
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>("welcome");
-  const [propertyFormsCategory, setPropertyFormsCategory] = useState<string>('الكل');
+  const [propertyFormsCategory, setPropertyFormsCategory] = useState<string>("الكل");
   const [properties, setProperties] = useState<any[]>([]);
   const [selectedProperty, setSelectedProperty] = useState<any>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
@@ -7392,9 +5777,7 @@ export default function App() {
 
   useEffect(() => {
     (window as any).selectProperty = setSelectedProperty;
-    return () => {
-      delete (window as any).selectProperty;
-    };
+    return () => { delete (window as any).selectProperty; };
   }, []);
 
   useEffect(() => {
@@ -7415,18 +5798,13 @@ export default function App() {
       const unsubscribe = onSnapshot(
         collection(db, "properties"),
         (snapshot) => {
-          const propsData = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
+          const propsData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
           setProperties(propsData);
           if (propsData.length > 0 && !selectedProperty) {
             setSelectedProperty(propsData[0]);
           }
         },
-        (error) => {
-          handleFirestoreError(error, OperationType.GET, "properties");
-        },
+        (error) => { handleFirestoreError(error, OperationType.GET, "properties"); },
       );
       return () => unsubscribe();
     }
@@ -7439,20 +5817,19 @@ export default function App() {
 
   useEffect(() => {
     (window as any).selectProperty = (p: any) => setSelectedProperty(p);
-    return () => {
-      delete (window as any).selectProperty;
-    };
+    return () => { delete (window as any).selectProperty; };
   }, []);
 
   if (!isAuthReady) {
     return (
-      <div className="min-h-screen bg-brand-dark flex items-center justify-center">
-        <div className="size-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-brand-dark flex flex-col items-center justify-center gap-4">
+        <div className="size-14 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-slate-400 text-sm font-medium">جاري التحميل...</p>
       </div>
     );
   }
 
-  const renderView = () => {
+  const renderPageContent = () => {
     switch (currentView) {
       case "welcome":
         return <WelcomeScreen onSelect={setCurrentView} />;
@@ -7464,48 +5841,24 @@ export default function App() {
             properties={properties}
           />
         );
-      case "accounting":
-        return <AccountingScreen onSelect={setCurrentView} />;
-      case "invoices":
-        return <InvoicesScreen onSelect={setCurrentView} />;
-      case "maintenance":
-        return <MaintenanceScreen onSelect={setCurrentView} />;
+      case "accounting":           return <AccountingScreen onSelect={setCurrentView} />;
+      case "invoices":             return <InvoicesScreen onSelect={setCurrentView} />;
+      case "maintenance":          return <MaintenanceScreen onSelect={setCurrentView} />;
       case "property_details":
-        return (
-          <PropertyDetailsScreen
-            onSelect={setCurrentView}
-            property={selectedProperty}
-          />
-        );
-      case "new_maintenance":
-        return <NewMaintenanceRequestScreen onSelect={setCurrentView} />;
-      case "tenant_dashboard":
-        return <TenantDashboard onSelect={setCurrentView} />;
-      case "settings":
-        return <SettingsScreen onSelect={setCurrentView} />;
-      case "reports":
-        return <ReportsScreen onSelect={setCurrentView} />;
+        return <PropertyDetailsScreen onSelect={setCurrentView} property={selectedProperty} />;
+      case "new_maintenance":      return <NewMaintenanceRequestScreen onSelect={setCurrentView} />;
+      case "tenant_dashboard":     return <TenantDashboard onSelect={setCurrentView} />;
+      case "settings":             return <SettingsScreen onSelect={setCurrentView} />;
+      case "reports":              return <ReportsScreen onSelect={setCurrentView} />;
       case "add_property":
-        return (
-          <AddPropertyScreen
-            onSelect={setCurrentView}
-            properties={properties}
-          />
-        );
-      case "owners":
-        return <OwnersManagementScreen onSelect={setCurrentView} />;
-      case "units":
-        return <UnitsManagementScreen onSelect={setCurrentView} />;
-      case "contracts":
-        return <ContractsManagementScreen onSelect={setCurrentView} />;
-      case "support":
-        return <SupportScreen onSelect={setCurrentView} />;
-      case "docs":
-        return <TechnicalDocsScreen onSelect={setCurrentView} />;
-      case "notifications":
-        return <NotificationsScreen onSelect={setCurrentView} />;
-      case "financial_report":
-        return <FinancialReportScreen onSelect={setCurrentView} />;
+        return <AddPropertyScreen onSelect={setCurrentView} properties={properties} />;
+      case "owners":               return <OwnersManagementScreen onSelect={setCurrentView} />;
+      case "units":                return <UnitsManagementScreen onSelect={setCurrentView} />;
+      case "contracts":            return <ContractsManagementScreen onSelect={setCurrentView} />;
+      case "support":              return <SupportScreen onSelect={setCurrentView} />;
+      case "docs":                 return <TechnicalDocsScreen onSelect={setCurrentView} />;
+      case "notifications":        return <NotificationsScreen onSelect={setCurrentView} />;
+      case "financial_report":     return <FinancialReportScreen onSelect={setCurrentView} />;
       case "property_report":
         return (
           <PropertyReportScreen
@@ -7515,43 +5868,44 @@ export default function App() {
           />
         );
       case "official_print":
-        return (
-          <OfficialPrintScreen
-            onSelect={setCurrentView}
-            property={selectedProperty}
-          />
-        );
-      case "publish": return <PublishingScreen onSelect={setCurrentView} />;
-      case "ai_assistant": return <AIAssistantScreen onSelect={setCurrentView} />;
-      case "payment": return <PaymentScreen onSelect={setCurrentView} />;
-      case "owner_dashboard": return <OwnerDashboard onSelect={setCurrentView} />;
-      case "tech_portal": return <TechPortal onSelect={setCurrentView} />;
-      case "msg_templates": return <MessageTemplatesScreen onSelect={setCurrentView} />;
-      case "property_forms": return <PropertyFormsScreen onSelect={setCurrentView} initialCategory={propertyFormsCategory} />;
-      case "zakat_tax":
-        return <ZakatTaxScreen onSelect={setCurrentView} />;
-      case "ejar_integration":
-        return <EjarIntegrationScreen onSelect={setCurrentView} />;
-      case "tech_performance":
-        return <TechPerformanceScreen onSelect={setCurrentView} />;
-      case "dev_center":
-        return <DeveloperCenterScreen onSelect={setCurrentView} />;
-      case "archive":
-        return <ArchiveScreen onSelect={setCurrentView} />;
-      case "tenant_satisfaction":
-        return <TenantSatisfactionReportScreen onSelect={setCurrentView} />;
-      case "tenants_management":
-        return <TenantsManagementScreen onSelect={setCurrentView} />;
-      case "vendors_management":
-        return <VendorsManagementScreen onSelect={setCurrentView} />;
-      case "asset_management":
-        return <AssetManagementScreen onSelect={setCurrentView} />;
-      default:
-        return <WelcomeScreen onSelect={setCurrentView} />;
+        return <OfficialPrintScreen onSelect={setCurrentView} property={selectedProperty} />;
+      case "publish":              return <PublishingScreen onSelect={setCurrentView} />;
+      case "ai_assistant":         return <AIAssistantScreen onSelect={setCurrentView} />;
+      case "payment":              return <PaymentScreen onSelect={setCurrentView} />;
+      case "owner_dashboard":      return <OwnerDashboard onSelect={setCurrentView} />;
+      case "tech_portal":          return <TechPortal onSelect={setCurrentView} />;
+      case "msg_templates":        return <MessageTemplatesScreen onSelect={setCurrentView} />;
+      case "property_forms":
+        return <PropertyFormsScreen onSelect={setCurrentView} initialCategory={propertyFormsCategory} />;
+      case "zakat_tax":            return <ZakatTaxScreen onSelect={setCurrentView} />;
+      case "ejar_integration":     return <EjarIntegrationScreen onSelect={setCurrentView} />;
+      case "tech_performance":     return <TechPerformanceScreen onSelect={setCurrentView} />;
+      case "dev_center":           return <DeveloperCenterScreen onSelect={setCurrentView} />;
+      case "archive":              return <ArchiveScreen onSelect={setCurrentView} />;
+      case "tenant_satisfaction":  return <TenantSatisfactionReportScreen onSelect={setCurrentView} />;
+      case "tenants_management":   return <TenantsManagementScreen onSelect={setCurrentView} />;
+      case "vendors_management":   return <VendorsManagementScreen onSelect={setCurrentView} />;
+      case "asset_management":     return <AssetManagementScreen onSelect={setCurrentView} />;
+      default:                     return <WelcomeScreen onSelect={setCurrentView} />;
     }
   };
 
+  // Standalone views (full-page, no sidebar)
+  if (STANDALONE_VIEWS.includes(currentView)) {
+    return <div className="min-h-screen font-sans">{renderPageContent()}</div>;
+  }
+
+  // Authenticated manager views — wrapped in AppLayout with sidebar
+  const pageInfo = PAGE_TITLES[currentView];
   return (
+    <AppLayout
+      activeView={currentView}
+      onSelect={setCurrentView}
+      title={pageInfo?.title}
+      subtitle={pageInfo?.subtitle}
+    >
+      {renderPageContent()}
+    </AppLayout>
     <LanguageProvider>
       <div className="min-h-screen font-sans">
         <div className="fixed top-4 right-4 z-[9999]">
