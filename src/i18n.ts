@@ -404,6 +404,7 @@ const translations = {
     official_report: 'تقرير عقاري رسمي',
     company_name: 'شركة رمز الإبداع لإدارة الأملاك',
     report_date: 'تاريخ التقرير:',
+    property_management: 'إدارة الأملاك',
   },
   en: {
     // Login Screen
@@ -808,6 +809,7 @@ const translations = {
     official_report: 'Official Property Report',
     company_name: 'Ramz Al-Ibda Property Management Company',
     report_date: 'Report Date:',
+    property_management: 'Property Management',
   },
 } as const;
 

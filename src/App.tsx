@@ -624,7 +624,7 @@ const ManagerDashboard = ({ onSelect, onSelectProperty }: { onSelect: (v: View) 
           </motion.div>
           <div>
             <h1 className="text-lg font-black leading-none text-white tracking-tight">رمز <span className="text-primary">الإبداع</span></h1>
-            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-1">Property Management</p>
+            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-1">{t('property_management')}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
