@@ -540,5 +540,6 @@ export const AddPropertyScreen = ({
           </button>
         </form>
       </div>
+    </div>
   );
 };

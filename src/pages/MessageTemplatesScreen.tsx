@@ -37,9 +37,8 @@ export const MessageTemplatesScreen = ({ onSelect }: { onSelect: (v: View) => vo
     : MSG_TEMPLATES.filter(t => t.category === cat).length;
 
   return (
-
-
-      <div className="p-4 md:p-6 space-y-6">
+    <>
+    <div className="p-4 md:p-6 space-y-6">
         {/* Stats */}
         <div className="grid grid-cols-4 gap-2">
           {[
