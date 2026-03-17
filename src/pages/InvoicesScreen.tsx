@@ -3,32 +3,13 @@ import { motion, AnimatePresence } from "motion/react";
 import { View } from "../types";
 import { cn, toArabicDigits } from "../utils";
 import { PROPERTIES, MAINTENANCE_REQUESTS, UNITS, TENANTS, OWNERS, CONTRACTS, INVOICES, VENDORS, MSG_TEMPLATES, PROPERTY_FORMS } from "../constants/data";
-import { Icon, BottomNav, Logo, ImageCarousel, ReportLayout, PropertyCard } from "../components/shared";
+import { Icon } from "../components/shared";
 
 export const InvoicesScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
   return (
-    <div className="min-h-screen bg-[#FDFDFD] pb-24">
-      <header className="flex items-center justify-between px-6 py-5 bg-brand-dark sticky top-0 z-30 shadow-xl">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => onSelect("manager_dashboard")}
-            className="flex items-center justify-center size-10 rounded-xl bg-white/5 text-white hover:bg-white/10 transition-all"
-          >
-            <Icon name="arrow_forward" />
-          </button>
-          <h1 className="text-lg font-black text-white">الفواتير</h1>
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="flex items-center justify-center size-10 rounded-xl bg-white/5 text-white hover:bg-white/10 transition-all">
-            <Icon name="filter_list" />
-          </button>
-          <button className="flex items-center justify-center size-10 rounded-xl gold-gradient text-brand-dark shadow-lg shadow-primary/20">
-            <Icon name="add" />
-          </button>
-        </div>
-      </header>
 
-      <main className="p-6 space-y-8">
+
+      <div className="p-4 md:p-6 space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="flex flex-col justify-between p-8 rounded-[2rem] bg-white shadow-sm border border-slate-100 relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-full -mr-16 -mt-16 opacity-50 group-hover:scale-110 transition-transform"></div>
@@ -159,9 +140,6 @@ export const InvoicesScreen = ({ onSelect }: { onSelect: (v: View) => void }) =>
             ))}
           </div>
         </div>
-      </main>
-
-      <BottomNav active="invoices" onSelect={onSelect} />
-    </div>
+      </div>
   );
 };

@@ -7,7 +7,7 @@ import {
 } from "recharts";
 import { View } from "../types";
 import { cn, toArabicDigits } from "../utils";
-import { Icon, BottomNav, Logo, ImageCarousel, ReportLayout, PropertyCard } from "../components/shared";
+import { Icon } from "../components/shared";
 
 export const AccountingScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
   const pieData = [
@@ -17,21 +17,9 @@ export const AccountingScreen = ({ onSelect }: { onSelect: (v: View) => void }) 
   ];
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD] pb-24">
-      <header className="flex items-center bg-brand-dark px-6 py-5 justify-between sticky top-0 z-30 shadow-xl">
-        <button
-          onClick={() => onSelect("manager_dashboard")}
-          className="flex size-10 items-center justify-center rounded-xl bg-white/5 text-white hover:bg-white/10 transition-all"
-        >
-          <Icon name="arrow_forward" className="text-2xl" />
-        </button>
-        <h2 className="text-lg font-black text-white">المحاسبة والمالية</h2>
-        <button className="flex size-10 items-center justify-center rounded-xl gold-gradient text-brand-dark shadow-lg shadow-primary/20">
-          <Icon name="add" className="text-2xl" />
-        </button>
-      </header>
 
-      <main className="p-6 space-y-6">
+
+      <div className="p-4 md:p-6 space-y-6">
         <motion.div
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -227,9 +215,6 @@ export const AccountingScreen = ({ onSelect }: { onSelect: (v: View) => void }) 
             ))}
           </div>
         </div>
-      </main>
-
-      <BottomNav active="accounting" onSelect={onSelect} />
-    </div>
+      </div>
   );
 };

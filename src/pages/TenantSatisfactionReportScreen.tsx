@@ -7,7 +7,7 @@ import {
 } from "recharts";
 import { View } from "../types";
 import { cn, toArabicDigits } from "../utils";
-import { Icon, BottomNav, Logo, ImageCarousel, ReportLayout, PropertyCard } from "../components/shared";
+import { Icon } from "../components/shared";
 
 export const TenantSatisfactionReportScreen = ({
   onSelect,
@@ -23,19 +23,8 @@ export const TenantSatisfactionReportScreen = ({
   ];
 
   return (
-    <div className="min-h-screen bg-[#f8f8f5] pb-24">
-      <header className="flex items-center justify-between p-4 bg-white sticky top-0 z-10 shadow-sm border-b border-primary/10">
-        <button
-          onClick={() => onSelect("reports")}
-          className="p-2 rounded-full hover:bg-slate-100 transition-colors"
-        >
-          <Icon name="arrow_forward" className="text-2xl" />
-        </button>
-        <h2 className="text-lg font-bold flex-1 text-center pr-12">
-          رضا المستأجرين
-        </h2>
-      </header>
-      <main className="p-4 space-y-6">
+
+      <div className="p-4 md:p-6 space-y-6">
         <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
           <div className="flex justify-between items-center mb-6">
             <h3 className="font-bold">مؤشرات الرضا حسب الفئة</h3>
@@ -156,8 +145,6 @@ export const TenantSatisfactionReportScreen = ({
             ))}
           </div>
         </section>
-      </main>
-      <BottomNav active="manager_dashboard" onSelect={onSelect} />
-    </div>
+      </div>
   );
 };

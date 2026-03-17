@@ -4,25 +4,13 @@ import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
 import { View } from "../types";
 import { cn, toArabicDigits } from "../utils";
-import { Icon, BottomNav, Logo, ImageCarousel, ReportLayout, PropertyCard } from "../components/shared";
+import { Icon, Logo } from "../components/shared";
 
 export const SettingsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
   return (
-    <div className="min-h-screen bg-[#f8f8f5] pb-24">
-      <header className="flex items-center justify-between p-4 bg-white sticky top-0 z-10 shadow-sm border-b border-primary/10">
-        <button
-          onClick={() => onSelect("manager_dashboard")}
-          className="p-2 rounded-full hover:bg-slate-100 transition-colors"
-        >
-          <Icon name="arrow_forward" className="text-2xl" />
-        </button>
-        <h2 className="text-lg font-bold flex-1 text-center">
-          إعدادات الحساب والهوية
-        </h2>
-        <button className="text-primary font-bold text-sm px-2">حفظ</button>
-      </header>
 
-      <main className="p-4 space-y-6">
+
+      <div className="p-4 md:p-6 space-y-6">
         <section className="flex flex-col items-center py-6">
           <div className="relative">
             <div className="w-28 h-28 rounded-full border-4 border-primary/20 p-1 bg-white shadow-sm overflow-hidden">
@@ -234,9 +222,6 @@ export const SettingsScreen = ({ onSelect }: { onSelect: (v: View) => void }) =>
         >
           تسجيل الخروج
         </button>
-      </main>
-
-      <BottomNav active="settings" onSelect={onSelect} />
-    </div>
+      </div>
   );
 };

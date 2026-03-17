@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { View } from "../types";
 import { cn, toArabicDigits } from "../utils";
-import { Icon, BottomNav, Logo, ImageCarousel, ReportLayout, PropertyCard } from "../components/shared";
+import { Icon } from "../components/shared";
 
 export const NewMaintenanceRequestScreen = ({
   onSelect,
@@ -23,7 +23,7 @@ export const NewMaintenanceRequestScreen = ({
 
   if (isSuccess) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
+      <div className="flex flex-col items-center justify-center p-6 text-center">
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
@@ -40,20 +40,7 @@ export const NewMaintenanceRequestScreen = ({
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f7f6] pb-24">
-      <header className="flex items-center justify-between p-4 pb-2 sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b border-slate-200">
-        <button
-          onClick={() => onSelect("maintenance")}
-          className="flex size-12 items-center justify-center rounded-full hover:bg-slate-100 transition-colors"
-        >
-          <Icon name="arrow_forward" className="text-2xl" />
-        </button>
-        <h2 className="text-lg font-bold flex-1 text-center pr-12">
-          طلب صيانة جديد
-        </h2>
-      </header>
-
-      <main className="p-4 space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
         <div className="space-y-4">
           <div className="flex flex-col gap-1">
             <label className="text-sm font-semibold">الممتلكات</label>
@@ -146,7 +133,6 @@ export const NewMaintenanceRequestScreen = ({
           {isSubmitting ? "جاري الإرسال..." : "إرسال الطلب"}
           {!isSubmitting && <Icon name="send" />}
         </button>
-      </main>
-    </div>
+      </div>
   );
 };

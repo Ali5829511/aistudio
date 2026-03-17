@@ -4,7 +4,7 @@ import { ChatMessage } from "../types";
 import { View } from "../types";
 import { cn, toArabicDigits } from "../utils";
 import { PROPERTY_CONTEXT, AI_QUICK_PROMPTS, PUBLISH_PLATFORMS } from "../constants/config";
-import { Icon, BottomNav, Logo, ImageCarousel, ReportLayout, PropertyCard } from "../components/shared";
+import { Icon } from "../components/shared";
 
 export const AIAssistantScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
   const updateMaintenanceStatus = async (id: string, status: string) => { console.log('updateMaintenanceStatus', id, status); };
@@ -94,29 +94,8 @@ export const AIAssistantScreen = ({ onSelect }: { onSelect: (v: View) => void })
     d.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <div className="min-h-screen bg-[#f8f8f5] flex flex-col">
+    <div className="flex flex-col">
       {/* Header */}
-      <header className="flex items-center justify-between p-4 bg-brand-dark sticky top-0 z-10 shadow-lg">
-        <button onClick={() => onSelect('manager_dashboard')} className="p-2 rounded-full hover:bg-white/10 transition-colors">
-          <Icon name="arrow_forward" className="text-2xl text-white" />
-        </button>
-        <div className="flex items-center gap-3 flex-1 justify-center pr-4">
-          <div className="w-9 h-9 gold-gradient rounded-full flex items-center justify-center shadow-md">
-            <Icon name="auto_awesome" className="text-brand-dark text-lg" filled />
-          </div>
-          <div>
-            <h2 className="text-base font-black text-white leading-none">المساعد الذكي</h2>
-            <p className="text-[9px] text-slate-400 font-bold mt-0.5">مدعوم بـ Gemini AI • رمز الإبداع</p>
-          </div>
-        </div>
-        <button
-          onClick={() => setMessages(prev => [prev[0]])}
-          className="p-2 rounded-full hover:bg-white/10 transition-colors"
-          title="مسح المحادثة"
-        >
-          <Icon name="delete_sweep" className="text-xl text-slate-400" />
-        </button>
-      </header>
 
       {/* Messages */}
       <main className="flex-1 overflow-y-auto p-4 space-y-4 pb-48">

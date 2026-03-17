@@ -1,13 +1,101 @@
-import React, { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import React, { useState } from "react";
+import { motion } from "motion/react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar,
-  Legend, AreaChart, Area,
+  ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area,
+  BarChart, Bar, Legend,
 } from "recharts";
 import { View } from "../types";
-import { cn, toArabicDigits } from "../utils";
-import { Icon, BottomNav, Logo, ImageCarousel, ReportLayout, PropertyCard } from "../components/shared";
+import { toArabicDigits } from "../utils";
+import { Icon, PropertyCard } from "../components/shared";
+import { MAINTENANCE_REQUESTS } from "../constants/data";
+
+const REVENUE_DATA = [
+  { name: "يناير", value: 120000, prev: 98000 },
+  { name: "فبراير", value: 135000, prev: 105000 },
+  { name: "مارس",  value: 118000, prev: 112000 },
+  { name: "أبريل", value: 142000, prev: 120000 },
+  { name: "مايو",  value: 155000, prev: 138000 },
+  { name: "يونيو", value: 148000, prev: 145000 },
+];
+
+const KPI_CARDS = [
+  {
+    label: "إجمالي التحصيل",
+    value: "١٤٥,٥٠٠",
+    unit: "ر.س",
+    icon: "payments",
+    change: "+١٢.٥٪",
+    up: true,
+    color: "bg-primary",
+    textColor: "text-white",
+  },
+  {
+    label: "إجمالي العقارات",
+    value: "١٥",
+    unit: "عقار",
+    icon: "apartment",
+    change: "+٢",
+    up: true,
+    color: "bg-white",
+    textColor: "text-slate-800",
+  },
+  {
+    label: "الوحدات المؤجرة",
+    value: "١٤٢",
+    unit: "وحدة",
+    icon: "door_front",
+    change: "٩٢٪ إشغال",
+    up: true,
+    color: "bg-white",
+    textColor: "text-slate-800",
+  },
+  {
+    label: "المستأجرون",
+    value: "٨٩",
+    unit: "مستأجر",
+    icon: "people",
+    change: "+٤ جديد",
+    up: true,
+    color: "bg-white",
+    textColor: "text-slate-800",
+  },
+  {
+    label: "طلبات الصيانة",
+    value: "٦",
+    unit: "طلب",
+    icon: "construction",
+    change: "٢ عاجل",
+    up: false,
+    color: "bg-white",
+    textColor: "text-slate-800",
+  },
+  {
+    label: "المتأخرات",
+    value: "١٨,٢٠٠",
+    unit: "ر.س",
+    icon: "warning",
+    change: "-٣.١٪",
+    up: true,
+    color: "bg-white",
+    textColor: "text-slate-800",
+  },
+];
+
+const QUICK_ACTIONS = [
+  { label: "إضافة عقار",    icon: "add_home",      view: "add_property"  as View, color: "brand-gradient text-white" },
+  { label: "عقد إيجار",     icon: "history_edu",   view: "contracts"     as View, color: "bg-emerald-600 text-white" },
+  { label: "فاتورة جديدة",  icon: "receipt_long",  view: "invoices"      as View, color: "bg-amber-500 text-white"  },
+  { label: "طلب صيانة",     icon: "build",         view: "new_maintenance" as View, color: "bg-slate-700 text-white" },
+  { label: "تقرير مالي",    icon: "bar_chart",     view: "financial_report" as View, color: "bg-purple-600 text-white" },
+  { label: "المساعد الذكي", icon: "smart_toy",     view: "ai_assistant"  as View, color: "bg-sky-600 text-white"    },
+];
+
+const STATUS_MAP: Record<string, { label: string; cls: string }> = {
+  new:         { label: "جديد",        cls: "badge-info"    },
+  in_progress: { label: "جاري",        cls: "badge-warning" },
+  completed:   { label: "مكتمل",       cls: "badge-success" },
+};
 
 export const ManagerDashboard = ({
   onSelect,
@@ -20,15 +108,6 @@ export const ManagerDashboard = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
 
-  const chartData = [
-    { name: "يناير", value: 4000 },
-    { name: "فبراير", value: 3000 },
-    { name: "مارس", value: 2000 },
-    { name: "أبريل", value: 2780 },
-    { name: "مايو", value: 1890 },
-    { name: "يونيو", value: 2390 },
-  ];
-
   const filteredProperties = properties.filter(
     (prop) =>
       prop.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -36,370 +115,258 @@ export const ManagerDashboard = ({
   );
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD] pb-24">
-      <header className="flex items-center justify-between p-4 bg-brand-dark sticky top-0 z-30 shadow-xl">
-        <div className="flex items-center gap-4">
+    <div className="p-4 md:p-6 space-y-6">
+      {/* ── KPI Cards ── */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+        {KPI_CARDS.map((kpi, i) => (
           <motion.div
-            initial={{ rotate: -10, scale: 0.9 }}
-            animate={{ rotate: 0, scale: 1 }}
-            className="bg-white/10 p-1 rounded-xl backdrop-blur-md"
-          >
-            <Logo className="size-10" />
-          </motion.div>
-          <div>
-            <h1 className="text-lg font-black leading-none text-white tracking-tight">
-              رمز <span className="text-primary">الإبداع</span>
-            </h1>
-            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-1">
-              Property Management
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => onSelect("notifications")}
-            className="relative p-2.5 rounded-xl bg-white/5 text-white hover:bg-white/10 transition-all"
-          >
-            <Icon name="notifications" className="text-xl" />
-            <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-primary rounded-full border-2 border-brand-dark"></span>
-          </button>
-          <button
-            onClick={() => onSelect("welcome")}
-            className="p-1 rounded-xl border border-white/10 overflow-hidden"
-          >
-            <div className="size-8 gold-gradient flex items-center justify-center rounded-lg">
-              <Icon name="person" className="text-brand-dark text-xl" filled />
-            </div>
-          </button>
-        </div>
-      </header>
-
-      <main className="p-5 space-y-8">
-        <motion.section
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-end justify-between"
-        >
-          <div>
-            <h2 className="text-3xl font-black text-brand-dark tracking-tight">
-              لوحة التحكم
-            </h2>
-            <p className="text-sm text-slate-400 font-medium mt-1">
-              نظرة عامة على أداء محفظتك العقارية
-            </p>
-          </div>
-          <div className="hidden sm:flex items-center gap-2 bg-slate-100 p-1 rounded-xl">
-            <button className="px-4 py-1.5 bg-white shadow-sm rounded-lg text-xs font-bold">
-              اليوم
-            </button>
-            <button className="px-4 py-1.5 text-slate-500 rounded-lg text-xs font-bold">
-              الأسبوع
-            </button>
-          </div>
-        </motion.section>
-
-        <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            key={kpi.label}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="bg-brand-dark p-6 rounded-[2rem] shadow-2xl shadow-brand-dark/20 col-span-1 md:col-span-2 flex flex-col justify-between relative overflow-hidden group"
+            transition={{ delay: i * 0.05 }}
+            className={`kpi-card flex flex-col gap-3 ${kpi.color === "bg-primary" ? "bg-primary text-white" : "bg-white"}`}
           >
-            <div className="absolute top-0 right-0 w-48 h-48 gold-gradient opacity-5 rounded-full -mr-24 -mt-24 blur-3xl group-hover:opacity-10 transition-opacity"></div>
-            <div className="flex justify-between items-start relative z-10">
-              <div>
-                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-2">
-                  إجمالي التحصيل المالي
-                </p>
-                <h3 className="text-4xl font-black text-white tracking-tighter">
-                  ١٤٥,٥٠٠{" "}
-                  <span className="text-lg font-bold text-primary">ر.س</span>
-                </h3>
-              </div>
-              <div className="size-14 gold-gradient rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20">
-                <Icon name="payments" className="text-brand-dark text-3xl" />
-              </div>
-            </div>
-            <div className="mt-8 flex items-center gap-3 relative z-10">
-              <div className="flex items-center gap-1 px-3 py-1 bg-primary/20 text-primary rounded-full text-[10px] font-black">
-                <Icon name="trending_up" className="text-[12px]" />
-                <span>+١٢.٥٪</span>
-              </div>
-              <p className="text-[10px] text-slate-500 font-bold">
-                مقارنة بالشهر الماضي
-              </p>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col justify-between group hover:shadow-xl transition-all"
-          >
-            <div className="size-12 bg-slate-50 rounded-2xl flex items-center justify-center mb-4 text-brand-dark group-hover:bg-brand-dark group-hover:text-white transition-all">
-              <Icon name="apartment" className="text-2xl" filled />
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">
-                إجمالي العقارات
-              </p>
-              <h3 className="text-3xl font-black text-brand-dark tracking-tighter">
-                {toArabicDigits(properties.length)}
-              </h3>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col justify-between group hover:shadow-xl transition-all"
-          >
-            <div className="size-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 text-primary group-hover:gold-gradient group-hover:text-brand-dark transition-all">
-              <Icon name="people" className="text-2xl" filled />
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">
-                المستأجرين
-              </p>
-              <h3 className="text-3xl font-black text-brand-dark tracking-tighter">
-                ٨٩
-              </h3>
-            </div>
-          </motion.div>
-        </section>
-
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h3 className="text-lg font-black text-brand-dark">
-                  تحليل الإيرادات
-                </h3>
-                <p className="text-xs text-slate-400 font-medium">
-                  معدل النمو الشهري للتحصيل
-                </p>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <div className="size-2 rounded-full bg-primary"></div>
-                  <span className="text-[10px] font-bold text-slate-500">
-                    الإيرادات
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                <LineChart data={chartData}>
-                  <defs>
-                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#C5A059" stopOpacity={0.1} />
-                      <stop offset="95%" stopColor="#C5A059" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="#f1f5f9"
-                  />
-                  <XAxis
-                    dataKey="name"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fill: "#94a3b8", fontWeight: 600 }}
-                    reversed
-                  />
-                  <YAxis hide />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: "20px",
-                      border: "none",
-                      boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
-                      padding: "12px 20px",
-                    }}
-                    labelStyle={{
-                      fontWeight: "900",
-                      color: "#121212",
-                      marginBottom: "4px",
-                    }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#C5A059"
-                    strokeWidth={4}
-                    dot={{
-                      r: 6,
-                      fill: "#C5A059",
-                      strokeWidth: 3,
-                      stroke: "#fff",
-                    }}
-                    activeDot={{ r: 8, strokeWidth: 0 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col">
-            <h3 className="text-lg font-black text-brand-dark mb-6">
-              توزيع الإشغال
-            </h3>
-            <div className="flex-grow flex items-center justify-center relative">
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-3xl font-black text-brand-dark">٩٢٪</span>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                  مشغول
-                </span>
-              </div>
-              <ResponsiveContainer width="100%" height="200" minWidth={0}>
-                <PieChart>
-                  <Pie
-                    data={[
-                      { name: "مشغول", value: 92 },
-                      { name: "شاغر", value: 8 },
-                    ]}
-                    innerRadius={65}
-                    outerRadius={85}
-                    paddingAngle={8}
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    <Cell fill="#C5A059" />
-                    <Cell fill="#F1F5F9" />
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="mt-6 space-y-3">
-              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl">
-                <div className="flex items-center gap-3">
-                  <div className="size-2 rounded-full bg-primary"></div>
-                  <span className="text-xs font-bold text-slate-600">
-                    وحدات مؤجرة
-                  </span>
-                </div>
-                <span className="text-xs font-black text-brand-dark">١٤٢</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl">
-                <div className="flex items-center gap-3">
-                  <div className="size-2 rounded-full bg-slate-300"></div>
-                  <span className="text-xs font-bold text-slate-600">
-                    وحدات شاغرة
-                  </span>
-                </div>
-                <span className="text-xs font-black text-brand-dark">١٢</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl font-black text-brand-dark">
-              إجراءات سريعة
-            </h3>
-            <div className="h-px flex-grow mx-6 bg-slate-100"></div>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              {
-                label: "إضافة عقار",
-                icon: "add_home",
-                color: "gold-gradient text-brand-dark",
-                view: "add_property",
-              },
-              {
-                label: "إدارة العقود",
-                icon: "history_edu",
-                color: "bg-brand-dark text-white",
-                view: "contracts",
-              },
-              {
-                label: "فاتورة جديدة",
-                icon: "receipt_long",
-                color: "bg-white border-slate-100 text-slate-600",
-                view: "invoices",
-              },
-              {
-                label: "طلب صيانة",
-                icon: "build",
-                color: "bg-white border-slate-100 text-slate-600",
-                view: "new_maintenance",
-              },
-            ].map((action, i) => (
-              <motion.button
-                key={i}
-                whileHover={{ y: -5, scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => onSelect(action.view as View)}
-                className={cn(
-                  "flex items-center gap-4 p-4 rounded-2xl shadow-sm border transition-all",
-                  action.color,
-                )}
+            <div className="flex items-start justify-between">
+              <div
+                className={`size-10 rounded-xl flex items-center justify-center ${
+                  kpi.color === "bg-primary"
+                    ? "bg-white/20"
+                    : "bg-primary-50"
+                }`}
               >
-                <div className="size-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-sm">
-                  <Icon name={action.icon} className="text-xl" />
+                <Icon
+                  name={kpi.icon}
+                  className={`text-xl ${kpi.color === "bg-primary" ? "text-white" : "text-primary"}`}
+                  filled
+                />
+              </div>
+              <span
+                className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                  kpi.color === "bg-primary"
+                    ? "bg-white/20 text-white"
+                    : kpi.up
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "bg-red-50 text-red-600"
+                }`}
+              >
+                {kpi.change}
+              </span>
+            </div>
+            <div>
+              <p
+                className={`text-xs font-medium mb-1 ${
+                  kpi.color === "bg-primary" ? "text-blue-200" : "text-slate-500"
+                }`}
+              >
+                {kpi.label}
+              </p>
+              <p
+                className={`text-2xl font-bold ${
+                  kpi.color === "bg-primary" ? "text-white" : "text-slate-800"
+                }`}
+              >
+                {kpi.value}{" "}
+                <span className="text-sm font-medium opacity-70">{kpi.unit}</span>
+              </p>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* ── Charts Row ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Revenue area chart */}
+        <div className="lg:col-span-2 bg-white rounded-2xl p-5 border border-slate-100 card-shadow">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-bold text-slate-800 text-sm">تحليل الإيرادات</h3>
+              <p className="text-xs text-slate-400 mt-0.5">مقارنة الأداء الشهري</p>
+            </div>
+            <div className="flex gap-3 text-xs text-slate-500">
+              <span className="flex items-center gap-1.5">
+                <span className="size-2.5 rounded-full bg-primary inline-block" />
+                هذا العام
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="size-2.5 rounded-full bg-slate-300 inline-block" />
+                العام الماضي
+              </span>
+            </div>
+          </div>
+          <div className="h-52">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+              <AreaChart data={REVENUE_DATA}>
+                <defs>
+                  <linearGradient id="gradBlue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor="#1d4ed8" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="#1d4ed8" stopOpacity={0}    />
+                  </linearGradient>
+                  <linearGradient id="gradGray" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor="#94a3b8" stopOpacity={0.12} />
+                    <stop offset="95%" stopColor="#94a3b8" stopOpacity={0}    />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#94a3b8" }} reversed />
+                <YAxis hide />
+                <Tooltip
+                  contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 10px 30px rgba(0,0,0,.12)", fontSize: "12px" }}
+                  formatter={(val: number) => [`${val.toLocaleString()} ر.س`]}
+                />
+                <Area type="monotone" dataKey="value" stroke="#1d4ed8" strokeWidth={2.5} fill="url(#gradBlue)" dot={false} activeDot={{ r: 5 }} />
+                <Area type="monotone" dataKey="prev"  stroke="#94a3b8" strokeWidth={1.5} fill="url(#gradGray)" dot={false} strokeDasharray="4 4" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Occupancy donut */}
+        <div className="bg-white rounded-2xl p-5 border border-slate-100 card-shadow flex flex-col">
+          <div className="mb-4">
+            <h3 className="font-bold text-slate-800 text-sm">نسبة الإشغال</h3>
+            <p className="text-xs text-slate-400 mt-0.5">توزيع الوحدات</p>
+          </div>
+          <div className="flex-1 flex items-center justify-center relative">
+            <div className="absolute flex flex-col items-center pointer-events-none">
+              <span className="text-2xl font-bold text-slate-800">٩٢٪</span>
+              <span className="text-xs text-slate-400">مشغولة</span>
+            </div>
+            <ResponsiveContainer width="100%" height={160} minWidth={0}>
+              <PieChart>
+                <Pie
+                  data={[{ value: 92 }, { value: 8 }]}
+                  innerRadius={52} outerRadius={70}
+                  paddingAngle={4} dataKey="value" stroke="none"
+                >
+                  <Cell fill="#1d4ed8" />
+                  <Cell fill="#e2e8f0" />
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="space-y-2 mt-2">
+            {[
+              { label: "وحدات مؤجرة", value: "١٤٢", color: "bg-primary" },
+              { label: "وحدات شاغرة",  value: "١٢",  color: "bg-slate-200" },
+            ].map((row) => (
+              <div key={row.label} className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <span className={`size-2.5 rounded-full ${row.color}`} />
+                  <span className="text-slate-500">{row.label}</span>
                 </div>
-                <span className="text-xs font-black tracking-tight">
-                  {action.label}
-                </span>
-              </motion.button>
+                <span className="font-bold text-slate-700">{row.value}</span>
+              </div>
             ))}
           </div>
-        </section>
+        </div>
+      </div>
 
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl font-black text-brand-dark">العقارات</h3>
+      {/* ── Quick Actions ── */}
+      <div>
+        <h3 className="text-sm font-bold text-slate-700 mb-3">إجراءات سريعة</h3>
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+          {QUICK_ACTIONS.map((action, i) => (
+            <motion.button
+              key={action.label}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.1 + i * 0.04 }}
+              whileHover={{ y: -3 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => onSelect(action.view)}
+              className={`flex flex-col items-center gap-2 p-4 rounded-2xl font-medium text-xs transition-all shadow-sm hover:shadow-md ${action.color}`}
+            >
+              <Icon name={action.icon} className="text-2xl" filled />
+              <span>{action.label}</span>
+            </motion.button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Bottom Row: Maintenance + Properties ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Recent Maintenance */}
+        <div className="bg-white rounded-2xl border border-slate-100 card-shadow overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-50">
+            <h3 className="font-bold text-slate-800 text-sm">آخر طلبات الصيانة</h3>
             <button
-              onClick={() => onSelect("property_details")}
-              className="text-primary text-xs font-black uppercase tracking-widest"
+              onClick={() => onSelect("maintenance")}
+              className="text-xs font-semibold text-primary hover:underline"
             >
               عرض الكل
             </button>
           </div>
-
-          {/* Search Bar */}
-          <div className="relative">
-            <Icon
-              name="search"
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
-            />
-            <input
-              type="text"
-              placeholder="ابحث عن عقار بالاسم أو العنوان..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white border border-slate-100 rounded-2xl py-3 pr-12 pl-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
-            />
+          <div className="divide-y divide-slate-50">
+            {MAINTENANCE_REQUESTS.slice(0, 4).map((req) => {
+              const s = STATUS_MAP[req.status] ?? { label: req.status, cls: "badge-neutral" };
+              return (
+                <div key={req.id} className="flex items-center gap-3 px-5 py-3">
+                  <div className="size-9 bg-slate-50 rounded-xl flex items-center justify-center shrink-0">
+                    <Icon name="construction" className="text-slate-400 text-base" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-700 truncate">{req.property}</p>
+                    <p className="text-xs text-slate-400 truncate">{req.unit} · {req.type}</p>
+                  </div>
+                  <span className={s.cls}>{s.label}</span>
+                </div>
+              );
+            })}
           </div>
+        </div>
 
-          {/* Property List */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Properties */}
+        <div className="bg-white rounded-2xl border border-slate-100 card-shadow overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-50">
+            <h3 className="font-bold text-slate-800 text-sm">العقارات</h3>
+            <button
+              onClick={() => onSelect("property_details")}
+              className="text-xs font-semibold text-primary hover:underline"
+            >
+              عرض الكل
+            </button>
+          </div>
+          {/* Search */}
+          <div className="px-4 py-3 border-b border-slate-50">
+            <div className="flex items-center gap-2 bg-slate-50 rounded-xl px-3 py-2">
+              <Icon name="search" className="text-slate-400 text-base" />
+              <input
+                type="text"
+                placeholder="بحث..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="bg-transparent text-sm outline-none flex-1 placeholder:text-slate-400 text-slate-700"
+              />
+            </div>
+          </div>
+          <div className="divide-y divide-slate-50 max-h-64 overflow-y-auto">
             {filteredProperties.length > 0 ? (
-              filteredProperties
-                .slice(0, 6)
-                .map((prop) => (
-                  <PropertyCard
-                    key={prop.id}
-                    property={prop}
-                    onSelectProperty={onSelectProperty}
-                  />
-                ))
+              filteredProperties.slice(0, 8).map((prop) => (
+                <button
+                  key={prop.id}
+                  onClick={() => onSelectProperty("property_details", prop)}
+                  className="w-full flex items-center gap-3 px-5 py-3 hover:bg-blue-50/40 transition-colors text-right"
+                >
+                  <div className="size-9 bg-primary-50 rounded-xl flex items-center justify-center shrink-0">
+                    <Icon name="apartment" className="text-primary text-base" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-700 truncate">{prop.name}</p>
+                    <p className="text-xs text-slate-400 truncate">{prop.location}</p>
+                  </div>
+                  <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium shrink-0">
+                    {toArabicDigits(prop.units ?? 0)} وحدة
+                  </span>
+                </button>
+              ))
             ) : (
-              <div className="col-span-full py-10 text-center text-slate-500 bg-slate-50 rounded-2xl border border-slate-100">
-                لا توجد عقارات مطابقة للبحث
+              <div className="py-8 text-center text-slate-400 text-sm">
+                لا توجد عقارات مطابقة
               </div>
             )}
           </div>
-        </section>
-      </main>
-
-      <BottomNav active="manager_dashboard" onSelect={onSelect} />
+        </div>
+      </div>
     </div>
   );
 };

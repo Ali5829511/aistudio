@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { View } from "../types";
 import { cn, toArabicDigits } from "../utils";
-import { Icon, BottomNav, Logo, ImageCarousel, ReportLayout, PropertyCard } from "../components/shared";
+import { Icon } from "../components/shared";
 
 export const DeveloperCenterScreen = ({
   onSelect,
@@ -10,19 +10,8 @@ export const DeveloperCenterScreen = ({
   onSelect: (v: View) => void;
 }) => {
   return (
-    <div className="min-h-screen bg-[#f8f8f5] pb-24">
-      <header className="flex items-center justify-between p-4 bg-white sticky top-0 z-10 shadow-sm border-b border-primary/10">
-        <button
-          onClick={() => onSelect("reports")}
-          className="p-2 rounded-full hover:bg-slate-100 transition-colors"
-        >
-          <Icon name="arrow_forward" className="text-2xl" />
-        </button>
-        <h2 className="text-lg font-bold flex-1 text-center pr-12">
-          مركز المطورين
-        </h2>
-      </header>
-      <main className="p-4 space-y-6">
+
+      <div className="p-4 md:p-6 space-y-6">
         <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-lg">
           <h3 className="font-bold mb-2">مفاتيح الـ API</h3>
           <p className="text-xs text-slate-400 mb-4">
@@ -130,8 +119,6 @@ export const DeveloperCenterScreen = ({
             </div>
           ))}
         </div>
-      </main>
-      <BottomNav active="manager_dashboard" onSelect={onSelect} />
-    </div>
+      </div>
   );
 };

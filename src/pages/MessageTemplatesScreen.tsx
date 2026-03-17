@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { View } from "../types";
 import { cn, toArabicDigits } from "../utils";
 import { PROPERTIES, MAINTENANCE_REQUESTS, UNITS, TENANTS, OWNERS, CONTRACTS, INVOICES, VENDORS, MSG_TEMPLATES, PROPERTY_FORMS } from "../constants/data";
-import { Icon, BottomNav, Logo, ImageCarousel, ReportLayout, PropertyCard } from "../components/shared";
+import { Icon } from "../components/shared";
 
 export const MessageTemplatesScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
   const [activeCategory, setActiveCategory] = useState('الكل');
@@ -37,21 +37,9 @@ export const MessageTemplatesScreen = ({ onSelect }: { onSelect: (v: View) => vo
     : MSG_TEMPLATES.filter(t => t.category === cat).length;
 
   return (
-    <div className="min-h-screen bg-[#f8f8f5] pb-24">
-      <header className="flex items-center justify-between p-4 bg-brand-dark sticky top-0 z-30 shadow-xl">
-        <button onClick={() => onSelect('manager_dashboard')} className="flex size-10 items-center justify-center rounded-xl bg-white/5 text-white hover:bg-white/10 transition-all">
-          <Icon name="arrow_forward" className="text-2xl" />
-        </button>
-        <div className="text-center">
-          <h2 className="text-base font-black text-white">قوالب الرسائل الآلية</h2>
-          <p className="text-[10px] text-primary font-bold">{toArabicDigits(MSG_TEMPLATES.length)} قالب جاهز</p>
-        </div>
-        <div className="flex size-10 items-center justify-center rounded-xl gold-gradient text-brand-dark shadow-lg shadow-primary/20">
-          <Icon name="mail_outline" className="text-xl" />
-        </div>
-      </header>
 
-      <main className="p-4 space-y-5">
+
+      <div className="p-4 md:p-6 space-y-6">
         {/* Stats */}
         <div className="grid grid-cols-4 gap-2">
           {[
@@ -151,7 +139,7 @@ export const MessageTemplatesScreen = ({ onSelect }: { onSelect: (v: View) => vo
             </motion.div>
           ))}
         </AnimatePresence>
-      </main>
+      </div>
 
       {/* Preview Modal */}
       <AnimatePresence>
@@ -283,8 +271,6 @@ export const MessageTemplatesScreen = ({ onSelect }: { onSelect: (v: View) => vo
           </motion.div>
         )}
       </AnimatePresence>
-
-      <BottomNav active="manager_dashboard" onSelect={onSelect} />
     </div>
   );
 };

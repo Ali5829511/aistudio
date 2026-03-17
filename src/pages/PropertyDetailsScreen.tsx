@@ -5,7 +5,7 @@ import "leaflet/dist/leaflet.css";
 import { View } from "../types";
 import { cn, toArabicDigits } from "../utils";
 import { PROPERTIES, MAINTENANCE_REQUESTS, UNITS, TENANTS, OWNERS, CONTRACTS, INVOICES, VENDORS, MSG_TEMPLATES, PROPERTY_FORMS } from "../constants/data";
-import { Icon, BottomNav, Logo, ImageCarousel, ReportLayout, PropertyCard } from "../components/shared";
+import { Icon, ImageCarousel } from "../components/shared";
 
 export const PropertyDetailsScreen = ({
   onSelect,
@@ -16,7 +16,7 @@ export const PropertyDetailsScreen = ({
 }) => {
   if (!property) {
     return (
-      <div className="min-h-screen bg-[#f8f7f6] flex flex-col items-center justify-center p-4">
+      <div className="flex flex-col items-center justify-center p-4">
         <Icon name="error_outline" className="text-4xl text-slate-400 mb-4" />
         <p className="text-slate-500 mb-4">لم يتم تحديد عقار</p>
         <button
@@ -30,37 +30,7 @@ export const PropertyDetailsScreen = ({
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f7f6] pb-24">
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-primary/10 px-4 pt-12 pb-4 flex items-center justify-between">
-        <button
-          onClick={() => onSelect("manager_dashboard")}
-          className="p-2 rounded-full hover:bg-black/5 transition-colors"
-        >
-          <Icon name="arrow_forward" />
-        </button>
-        <h1 className="text-lg font-bold">تفاصيل العقار</h1>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => window.print()}
-            className="p-2 rounded-full hover:bg-black/5 transition-colors text-slate-400"
-            title="طباعة سريعة"
-          >
-            <Icon name="print" />
-          </button>
-          <button
-            onClick={() => onSelect("property_report")}
-            className="p-2 rounded-full hover:bg-black/5 transition-colors text-primary"
-            title="تقرير العقار"
-          >
-            <Icon name="description" />
-          </button>
-          <button className="p-2 rounded-full hover:bg-black/5 transition-colors text-primary">
-            <Icon name="edit" />
-          </button>
-        </div>
-      </header>
-
-      <main className="space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
         <div className="px-5">
           <ImageCarousel
             images={[
@@ -307,9 +277,6 @@ export const PropertyDetailsScreen = ({
             ))}
           </div>
         </section>
-      </main>
-
-      <BottomNav active="property_details" onSelect={onSelect} />
-    </div>
+      </div>
   );
 };

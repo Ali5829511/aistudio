@@ -4,7 +4,7 @@ import { addDoc, collection } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../firebase";
 import { View } from "../types";
 import { cn, toArabicDigits } from "../utils";
-import { Icon, BottomNav, Logo, ImageCarousel, ReportLayout, PropertyCard } from "../components/shared";
+import { Icon } from "../components/shared";
 
 export const AddPropertyScreen = ({
   onSelect,
@@ -132,7 +132,7 @@ export const AddPropertyScreen = ({
 
   if (isSuccess) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
+      <div className="flex flex-col items-center justify-center p-6 text-center">
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
@@ -216,26 +216,7 @@ export const AddPropertyScreen = ({
   );
 
   return (
-    <div className="min-h-screen bg-[#f8f8f5] pb-24 print:bg-white print:pb-0">
-      <header className="flex items-center justify-between p-4 bg-white sticky top-0 z-30 shadow-sm border-b border-primary/10 print:hidden">
-        <button
-          onClick={() => onSelect("manager_dashboard")}
-          className="p-2 rounded-full hover:bg-slate-100 transition-colors"
-        >
-          <Icon name="arrow_forward" className="text-2xl" />
-        </button>
-        <h2 className="text-lg font-bold flex-1 text-center">
-          إضافة عقار جديد / تقرير مفصل
-        </h2>
-        <button
-          onClick={handlePrint}
-          className="p-2 rounded-full hover:bg-slate-100 transition-colors text-primary"
-          title="طباعة البيانات"
-        >
-          <Icon name="print" className="text-2xl" />
-        </button>
-      </header>
-
+    <div className="p-4 md:p-6 space-y-6">
       <div className="hidden print:block text-center pt-8 pb-4">
         <h1 className="text-3xl font-black text-brand-dark mb-2">
           تقرير تفصيلي للعقار
@@ -245,7 +226,7 @@ export const AddPropertyScreen = ({
         </p>
       </div>
 
-      <main className="p-4 max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
             <motion.div
@@ -558,7 +539,6 @@ export const AddPropertyScreen = ({
             )}
           </button>
         </form>
-      </main>
-    </div>
+      </div>
   );
 };

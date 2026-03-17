@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { View } from "../types";
 import { cn, toArabicDigits } from "../utils";
-import { Icon, BottomNav, Logo, ImageCarousel, ReportLayout, PropertyCard } from "../components/shared";
+import { Icon } from "../components/shared";
 
 export const PaymentScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
   const updateMaintenanceStatus = async (id: string, status: string) => { console.log('updateMaintenanceStatus', id, status); };
@@ -23,16 +23,9 @@ export const PaymentScreen = ({ onSelect }: { onSelect: (v: View) => void }) => 
   ];
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD] pb-24">
-      <header className="flex items-center bg-brand-dark px-6 py-5 justify-between sticky top-0 z-30 shadow-xl">
-        <button onClick={() => onSelect('tenant_dashboard')} className="flex size-10 items-center justify-center rounded-xl bg-white/5 text-white hover:bg-white/10 transition-all">
-          <Icon name="arrow_forward" className="text-2xl" />
-        </button>
-        <h2 className="text-lg font-black text-white">دفع الإيجار</h2>
-        <div className="size-10" />
-      </header>
 
-      <main className="p-6 space-y-6">
+
+      <div className="p-4 md:p-6 space-y-6">
         {submitted ? (
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
@@ -178,7 +171,6 @@ export const PaymentScreen = ({ onSelect }: { onSelect: (v: View) => void }) => 
             </section>
           </>
         )}
-      </main>
-    </div>
+      </div>
   );
 };

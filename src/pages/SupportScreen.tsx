@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { View } from "../types";
 import { cn, toArabicDigits } from "../utils";
-import { Icon, BottomNav, Logo, ImageCarousel, ReportLayout, PropertyCard } from "../components/shared";
+import { Icon } from "../components/shared";
 
 export const SupportScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -20,7 +20,7 @@ export const SupportScreen = ({ onSelect }: { onSelect: (v: View) => void }) => 
 
   if (isSuccess) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
+      <div className="flex flex-col items-center justify-center p-6 text-center">
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
@@ -37,19 +37,7 @@ export const SupportScreen = ({ onSelect }: { onSelect: (v: View) => void }) => 
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f7f6] pb-24">
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-primary/10 px-4 pt-12 pb-4 flex items-center justify-between">
-        <button
-          onClick={() => onSelect("manager_dashboard")}
-          className="p-2 rounded-full hover:bg-black/5 transition-colors"
-        >
-          <Icon name="arrow_forward" />
-        </button>
-        <h1 className="text-lg font-bold">الدعم الفني</h1>
-        <div className="w-10"></div>
-      </header>
-
-      <main className="p-5 space-y-8">
+    <div className="p-4 md:p-6 space-y-6">
         <section className="text-center space-y-2">
           <h2 className="text-2xl font-black text-brand-dark">
             كيف يمكننا مساعدتك؟
@@ -134,8 +122,6 @@ export const SupportScreen = ({ onSelect }: { onSelect: (v: View) => void }) => 
             </button>
           </form>
         </section>
-      </main>
-      <BottomNav active="settings" onSelect={onSelect} />
-    </div>
+      </div>
   );
 };

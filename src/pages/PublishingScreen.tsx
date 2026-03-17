@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { View } from "../types";
 import { cn, toArabicDigits } from "../utils";
 import { PROPERTY_CONTEXT, AI_QUICK_PROMPTS, PUBLISH_PLATFORMS } from "../constants/config";
-import { Icon, BottomNav, Logo, ImageCarousel, ReportLayout, PropertyCard } from "../components/shared";
+import { Icon } from "../components/shared";
 
 export const PublishingScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
   const [selectedPlatform, setSelectedPlatform] = useState<number | null>(null);
@@ -56,15 +56,9 @@ export const PublishingScreen = ({ onSelect }: { onSelect: (v: View) => void }) 
   ];
 
   return (
-    <div className="min-h-screen bg-[#f8f8f5] pb-24">
-      <header className="flex items-center justify-between p-4 bg-white sticky top-0 z-10 shadow-sm border-b border-primary/10">
-        <button onClick={() => onSelect('reports')} className="p-2 rounded-full hover:bg-slate-100 transition-colors">
-          <Icon name="arrow_forward" className="text-2xl" />
-        </button>
-        <h2 className="text-lg font-bold flex-1 text-center pr-12">نشر المشروع بالذكاء الاصطناعي</h2>
-      </header>
 
-      <main className="p-4 space-y-6">
+
+      <div className="p-4 md:p-6 space-y-6">
         {/* Hero Banner */}
         <div className="bg-gradient-to-bl from-violet-600 to-indigo-700 text-white p-5 rounded-2xl shadow-lg">
           <div className="flex items-center gap-3 mb-3">
@@ -210,9 +204,6 @@ export const PublishingScreen = ({ onSelect }: { onSelect: (v: View) => void }) 
             </div>
           )}
         </section>
-      </main>
-
-      <BottomNav active="manager_dashboard" onSelect={onSelect} />
-    </div>
+      </div>
   );
 };

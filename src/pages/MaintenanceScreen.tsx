@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { View } from "../types";
 import { cn, toArabicDigits } from "../utils";
 import { PROPERTIES, MAINTENANCE_REQUESTS, UNITS, TENANTS, OWNERS, CONTRACTS, INVOICES, VENDORS, MSG_TEMPLATES, PROPERTY_FORMS } from "../constants/data";
-import { Icon, BottomNav, Logo, ImageCarousel, ReportLayout, PropertyCard } from "../components/shared";
+import { Icon } from "../components/shared";
 
 export const MaintenanceScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
   const [activeTab, setActiveTab] = useState(0);
@@ -25,26 +25,8 @@ export const MaintenanceScreen = ({ onSelect }: { onSelect: (v: View) => void })
   });
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD] pb-24">
-      <header className="flex items-center justify-between px-6 py-5 bg-brand-dark sticky top-0 z-30 shadow-xl">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => onSelect("manager_dashboard")}
-            className="flex items-center justify-center size-10 rounded-xl bg-white/5 text-white hover:bg-white/10 transition-all"
-          >
-            <Icon name="arrow_forward" />
-          </button>
-          <h1 className="text-lg font-black text-white">الصيانة</h1>
-        </div>
-        <button
-          onClick={() => onSelect("new_maintenance")}
-          className="flex items-center justify-center size-10 rounded-xl gold-gradient text-brand-dark shadow-lg shadow-primary/20"
-        >
-          <Icon name="add" />
-        </button>
-      </header>
-
-      <div className="bg-brand-dark pb-6 px-6 shadow-xl">
+    <div className="p-4 md:p-6 space-y-6">
+      <div className="bg-brand-dark pb-6 px-6 shadow-xl -mx-4 md:-mx-6 -mt-4 md:-mt-6">
         <div className="flex bg-white/5 p-1.5 rounded-2xl border border-white/10 backdrop-blur-md">
           {tabs.map((tab, i) => (
             <button
@@ -63,8 +45,7 @@ export const MaintenanceScreen = ({ onSelect }: { onSelect: (v: View) => void })
         </div>
       </div>
 
-      <main className="p-6 space-y-6">
-        <div className="relative group">
+      <div className="relative group">
           <Icon
             name="search"
             className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors"
@@ -210,9 +191,6 @@ export const MaintenanceScreen = ({ onSelect }: { onSelect: (v: View) => void })
             )}
           </AnimatePresence>
         </div>
-      </main>
-
-      <BottomNav active="maintenance" onSelect={onSelect} />
-    </div>
+      </div>
   );
 };
