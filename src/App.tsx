@@ -16,6 +16,7 @@ import {
   type Owner, type Contract, type Vendor, type Invoice, type AdminUser,
 } from './api.ts';
 import { useLang, LanguageProvider, LanguageToggle } from './LanguageContext';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 
 // --- Utility ---
 function cn(...inputs: ClassValue[]) {
