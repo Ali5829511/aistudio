@@ -32,7 +32,8 @@ import {
 } from "recharts";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { LanguageProvider, LanguageToggle, useLang } from "./LanguageContext";
+import { collection, onSnapshot } from "firebase/firestore";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
@@ -52,7 +53,9 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const toArabicDigits = (num: number | string) => {
+const toArabicDigits = (num: number | string | undefined | null, lang: Lang = 'ar') => {
+  if (num === undefined || num === null) return "";
+  if (lang === 'en') return num.toString();
   const id = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
   return num.toString().replace(/[0-9]/g, (w) => id[+w]);
 };
@@ -442,6 +445,7 @@ const Logo = ({ className = "size-32" }: { className?: string }) => (
 );
 
 const WelcomeScreen = ({ onSelect }: { onSelect: (view: View) => void }) => {
+  const { t, lang } = useLang();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -453,19 +457,19 @@ const WelcomeScreen = ({ onSelect }: { onSelect: (view: View) => void }) => {
       if (result.user.email === "aliayashi522@gmail.com") {
         onSelect("manager_dashboard");
       } else {
-        setError("غير مصرح لك بالدخول كمدير نظام.");
+        setError(lang === 'ar' ? "غير مصرح لك بالدخول كمدير نظام." : "Unauthorized access as system manager.");
         await signOut(auth);
       }
     } catch (error) {
       console.error("Login error:", error);
-      setError("حدث خطأ أثناء تسجيل الدخول.");
+      setError(lang === 'ar' ? "حدث خطأ أثناء تسجيل الدخول." : "An error occurred during login.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-brand-dark flex flex-col relative overflow-hidden">
+    <div className={cn("min-h-screen bg-brand-dark flex flex-col relative overflow-hidden", lang === 'ar' ? "rtl" : "ltr")}>
       {/* Background Decorative Elements */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full -mr-64 -mt-64 blur-3xl"></div>
       <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-primary/5 rounded-full -ml-32 -mb-32 blur-3xl"></div>
@@ -483,10 +487,10 @@ const WelcomeScreen = ({ onSelect }: { onSelect: (view: View) => void }) => {
           <Logo className="size-48" />
         </motion.div>
         <h1 className="text-white text-5xl font-black text-center mb-3 tracking-tight">
-          رمز <span className="text-primary">الإبداع</span>
+          {lang === 'ar' ? "رمز" : "RAMZ"} <span className="text-primary">{lang === 'ar' ? "الإبداع" : "AL-IBDA"}</span>
         </h1>
         <p className="text-slate-400 text-center max-w-xl font-medium text-xl tracking-wide">
-          الريادة في إدارة الأملاك العقارية
+          {t('welcome_subtitle')}
         </p>
         <div className="w-24 h-1 gold-gradient rounded-full mt-6"></div>
       </motion.header>
@@ -513,10 +517,10 @@ const WelcomeScreen = ({ onSelect }: { onSelect: (view: View) => void }) => {
             </div>
 
             <h3 className="text-xl font-bold text-white mb-2 group-hover:text-primary transition-colors">
-              {loading ? "جاري تسجيل الدخول..." : "تسجيل دخول مدير النظام"}
+              {loading ? (lang === 'ar' ? "جاري تسجيل الدخول..." : "Logging in...") : t('sign_in')}
             </h3>
             <p className="text-slate-500 text-sm font-medium leading-relaxed">
-              تسجيل الدخول باستخدام حساب Google المعتمد
+              {lang === 'ar' ? "تسجيل الدخول باستخدام حساب Google المعتمد" : "Sign in using authorized Google account"}
             </p>
           </motion.button>
           
@@ -543,17 +547,17 @@ const WelcomeScreen = ({ onSelect }: { onSelect: (view: View) => void }) => {
           </div>
           <div className="flex gap-6 text-slate-500 text-sm font-bold">
             <a href="#" className="hover:text-primary transition-colors">
-              عن الشركة
+              {lang === 'ar' ? "عن الشركة" : "About Us"}
             </a>
             <a href="#" className="hover:text-primary transition-colors">
-              خدماتنا
+              {lang === 'ar' ? "خدماتنا" : "Our Services"}
             </a>
             <a href="#" className="hover:text-primary transition-colors">
-              اتصل بنا
+              {lang === 'ar' ? "اتصل بنا" : "Contact Us"}
             </a>
           </div>
           <p className="text-xs text-slate-600 font-medium">
-            © 2024 شركة رمز الإبداع لادارة الاملاك. جميع الحقوق محفوظة.
+            © {new Date().getFullYear()} {lang === 'ar' ? "شركة رمز الإبداع لادارة الاملاك. جميع الحقوق محفوظة." : "Ramz Al-Ibda Property Management. All rights reserved."}
           </p>
         </div>
       </footer>
@@ -570,6 +574,7 @@ const ManagerDashboard = ({
   onSelectProperty: (v: View, p: any) => void;
   properties: any[];
 }) => {
+  const { t, lang } = useLang();
   const [searchQuery, setSearchQuery] = useState("");
 
   const chartData = [
@@ -588,7 +593,7 @@ const ManagerDashboard = ({
   );
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD] pb-24">
+    <div className={cn("min-h-screen bg-[#FDFDFD] pb-24", lang === 'ar' ? "rtl" : "ltr")}>
       <header className="flex items-center justify-between p-4 bg-brand-dark sticky top-0 z-30 shadow-xl">
         <div className="flex items-center gap-4">
           <motion.div
@@ -600,10 +605,10 @@ const ManagerDashboard = ({
           </motion.div>
           <div>
             <h1 className="text-lg font-black leading-none text-white tracking-tight">
-              رمز <span className="text-primary">الإبداع</span>
+              {lang === 'ar' ? "رمز" : "RAMZ"} <span className="text-primary">{lang === 'ar' ? "الإبداع" : "AL-IBDA"}</span>
             </h1>
             <p className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-1">
-              Property Management
+              {t('property_management')}
             </p>
           </div>
         </div>
@@ -634,18 +639,18 @@ const ManagerDashboard = ({
         >
           <div>
             <h2 className="text-3xl font-black text-brand-dark tracking-tight">
-              لوحة التحكم
+              {t('dashboard_title')}
             </h2>
             <p className="text-sm text-slate-400 font-medium mt-1">
-              نظرة عامة على أداء محفظتك العقارية
+              {t('dashboard_subtitle')}
             </p>
           </div>
           <div className="hidden sm:flex items-center gap-2 bg-slate-100 p-1 rounded-xl">
             <button className="px-4 py-1.5 bg-white shadow-sm rounded-lg text-xs font-bold">
-              اليوم
+              {t('today')}
             </button>
             <button className="px-4 py-1.5 text-slate-500 rounded-lg text-xs font-bold">
-              الأسبوع
+              {t('this_week')}
             </button>
           </div>
         </motion.section>
@@ -661,11 +666,11 @@ const ManagerDashboard = ({
             <div className="flex justify-between items-start relative z-10">
               <div>
                 <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-2">
-                  إجمالي التحصيل المالي
+                  {t('total_collection')}
                 </p>
                 <h3 className="text-4xl font-black text-white tracking-tighter">
-                  ١٤٥,٥٠٠{" "}
-                  <span className="text-lg font-bold text-primary">ر.س</span>
+                  {toArabicDigits("١٤٥,٥٠٠", lang)}{" "}
+                  <span className="text-lg font-bold text-primary">{t('sar')}</span>
                 </h3>
               </div>
               <div className="size-14 gold-gradient rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20">
@@ -675,10 +680,10 @@ const ManagerDashboard = ({
             <div className="mt-8 flex items-center gap-3 relative z-10">
               <div className="flex items-center gap-1 px-3 py-1 bg-primary/20 text-primary rounded-full text-[10px] font-black">
                 <Icon name="trending_up" className="text-[12px]" />
-                <span>+١٢.٥٪</span>
+                <span>+{toArabicDigits("١٢.٥", lang)}٪</span>
               </div>
               <p className="text-[10px] text-slate-500 font-bold">
-                مقارنة بالشهر الماضي
+                {t('compare_last_month')}
               </p>
             </div>
           </motion.div>
@@ -694,10 +699,10 @@ const ManagerDashboard = ({
             </div>
             <div>
               <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">
-                إجمالي العقارات
+                {t('total_properties')}
               </p>
               <h3 className="text-3xl font-black text-brand-dark tracking-tighter">
-                {toArabicDigits(properties.length)}
+                {toArabicDigits(properties.length, lang)}
               </h3>
             </div>
           </motion.div>
@@ -713,10 +718,10 @@ const ManagerDashboard = ({
             </div>
             <div>
               <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">
-                المستأجرين
+                {t('tenants')}
               </p>
               <h3 className="text-3xl font-black text-brand-dark tracking-tighter">
-                ٨٩
+                {toArabicDigits("٨٩", lang)}
               </h3>
             </div>
           </motion.div>
@@ -727,17 +732,17 @@ const ManagerDashboard = ({
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h3 className="text-lg font-black text-brand-dark">
-                  تحليل الإيرادات
+                  {t('revenue_analysis')}
                 </h3>
                 <p className="text-xs text-slate-400 font-medium">
-                  معدل النمو الشهري للتحصيل
+                  {t('monthly_growth')}
                 </p>
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <div className="size-2 rounded-full bg-primary"></div>
                   <span className="text-[10px] font-bold text-slate-500">
-                    الإيرادات
+                    {t('revenues')}
                   </span>
                 </div>
               </div>
@@ -797,21 +802,21 @@ const ManagerDashboard = ({
 
           <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col">
             <h3 className="text-lg font-black text-brand-dark mb-6">
-              توزيع الإشغال
+              {t('occupancy_distribution')}
             </h3>
             <div className="flex-grow flex items-center justify-center relative">
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-3xl font-black text-brand-dark">٩٢٪</span>
+                <span className="text-3xl font-black text-brand-dark">{toArabicDigits("٩٢", lang)}٪</span>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                  مشغول
+                  {t('occupied')}
                 </span>
               </div>
               <ResponsiveContainer width="100%" height="200" minWidth={0}>
                 <PieChart>
                   <Pie
                     data={[
-                      { name: "مشغول", value: 92 },
-                      { name: "شاغر", value: 8 },
+                      { name: t('occupied'), value: 92 },
+                      { name: t('vacant_unit'), value: 8 },
                     ]}
                     innerRadius={65}
                     outerRadius={85}
@@ -831,19 +836,19 @@ const ManagerDashboard = ({
                 <div className="flex items-center gap-3">
                   <div className="size-2 rounded-full bg-primary"></div>
                   <span className="text-xs font-bold text-slate-600">
-                    وحدات مؤجرة
+                    {t('rented_units')}
                   </span>
                 </div>
-                <span className="text-xs font-black text-brand-dark">١٤٢</span>
+                <span className="text-xs font-black text-brand-dark">{toArabicDigits("١٤٢", lang)}</span>
               </div>
               <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl">
                 <div className="flex items-center gap-3">
                   <div className="size-2 rounded-full bg-slate-300"></div>
                   <span className="text-xs font-bold text-slate-600">
-                    وحدات شاغرة
+                    {t('vacant_units')}
                   </span>
                 </div>
-                <span className="text-xs font-black text-brand-dark">١٢</span>
+                <span className="text-xs font-black text-brand-dark">{toArabicDigits("١٢", lang)}</span>
               </div>
             </div>
           </div>
@@ -852,32 +857,32 @@ const ManagerDashboard = ({
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-xl font-black text-brand-dark">
-              إجراءات سريعة
+              {t('quick_actions')}
             </h3>
             <div className="h-px flex-grow mx-6 bg-slate-100"></div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
               {
-                label: "إضافة عقار",
+                label: t('add_property'),
                 icon: "add_home",
                 color: "gold-gradient text-brand-dark",
                 view: "add_property",
               },
               {
-                label: "إدارة العقود",
+                label: t('manage_contracts'),
                 icon: "history_edu",
                 color: "bg-brand-dark text-white",
                 view: "contracts",
               },
               {
-                label: "فاتورة جديدة",
+                label: t('new_invoice'),
                 icon: "receipt_long",
                 color: "bg-white border-slate-100 text-slate-600",
                 view: "invoices",
               },
               {
-                label: "طلب صيانة",
+                label: t('maintenance_request'),
                 icon: "build",
                 color: "bg-white border-slate-100 text-slate-600",
                 view: "new_maintenance",
@@ -906,12 +911,12 @@ const ManagerDashboard = ({
 
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-xl font-black text-brand-dark">العقارات</h3>
+            <h3 className="text-xl font-black text-brand-dark">{t('nav_properties')}</h3>
             <button
               onClick={() => onSelect("property_details")}
               className="text-primary text-xs font-black uppercase tracking-widest"
             >
-              عرض الكل
+              {t('view_all')}
             </button>
           </div>
 
@@ -919,14 +924,17 @@ const ManagerDashboard = ({
           <div className="relative">
             <Icon
               name="search"
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+              className={cn("absolute top-1/2 -translate-y-1/2 text-slate-400", lang === 'ar' ? "right-4" : "left-4")}
             />
             <input
               type="text"
-              placeholder="ابحث عن عقار بالاسم أو العنوان..."
+              placeholder={lang === 'ar' ? "ابحث عن عقار بالاسم أو العنوان..." : "Search for property by name or address..."}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white border border-slate-100 rounded-2xl py-3 pr-12 pl-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
+              className={cn(
+                "w-full bg-white border border-slate-100 rounded-2xl py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm",
+                lang === 'ar' ? "pr-12 pl-4" : "pl-12 pr-4"
+              )}
             />
           </div>
 
@@ -944,7 +952,7 @@ const ManagerDashboard = ({
                 ))
             ) : (
               <div className="col-span-full py-10 text-center text-slate-500 bg-slate-50 rounded-2xl border border-slate-100">
-                لا توجد عقارات مطابقة للبحث
+                {lang === 'ar' ? "لا توجد عقارات مطابقة للبحث" : "No matching properties found"}
               </div>
             )}
           </div>
@@ -960,22 +968,23 @@ const PropertyCard: React.FC<{
   property: any;
   onSelectProperty: (view: View, prop: any) => void;
 }> = ({ property, onSelectProperty }) => {
+  const { t, lang } = useLang();
   // Determine status color and label
   let statusColor = "bg-green-100 text-green-700";
-  let statusLabel = "متاح";
+  let statusLabel = t('available');
   if (property.status === "نشط") {
     statusColor = "bg-blue-100 text-blue-700";
-    statusLabel = "مؤجر بالكامل";
+    statusLabel = lang === 'ar' ? "مؤجر بالكامل" : "Fully Rented";
   } else if (property.status === "صيانة") {
     statusColor = "bg-amber-100 text-amber-700";
-    statusLabel = "تحت الصيانة";
+    statusLabel = t('unit_maintenance');
   }
 
   return (
     <motion.div
       whileHover={{ y: -4, scale: 1.01 }}
       onClick={() => onSelectProperty("property_details", property)}
-      className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden cursor-pointer group flex flex-col"
+      className={cn("bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden cursor-pointer group flex flex-col", lang === 'ar' ? "text-right" : "text-left")}
     >
       <div className="h-40 bg-slate-200 relative overflow-hidden">
         <img
@@ -988,13 +997,13 @@ const PropertyCard: React.FC<{
 
         {/* Status Indicator */}
         <div
-          className={`absolute top-4 right-4 px-3 py-1 rounded-full text-[10px] font-black tracking-widest ${statusColor}`}
+          className={cn("absolute top-4 px-3 py-1 rounded-full text-[10px] font-black tracking-widest", statusColor, lang === 'ar' ? "right-4" : "left-4")}
         >
           {statusLabel}
         </div>
 
         {/* Type Badge */}
-        <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] font-bold">
+        <div className={cn("absolute top-4 bg-black/40 backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] font-bold", lang === 'ar' ? "left-4" : "right-4")}>
           {property.type}
         </div>
 
@@ -1015,7 +1024,7 @@ const PropertyCard: React.FC<{
                 onSelectProperty("property_report", property);
               }}
               className="size-8 bg-white/20 backdrop-blur-md rounded-lg flex items-center justify-center text-white hover:bg-primary hover:text-brand-dark transition-all"
-              title="تقرير العقار"
+              title={lang === 'ar' ? "تقرير العقار" : "Property Report"}
             >
               <Icon name="description" className="text-lg" />
             </button>
@@ -1026,7 +1035,7 @@ const PropertyCard: React.FC<{
                 setTimeout(() => window.print(), 500);
               }}
               className="size-8 bg-white/20 backdrop-blur-md rounded-lg flex items-center justify-center text-white hover:bg-brand-yellow hover:text-brand-dark transition-all"
-              title="طباعة سريعة"
+              title={lang === 'ar' ? "طباعة سريعة" : "Quick Print"}
             >
               <Icon name="print" className="text-lg" />
             </button>
@@ -1040,11 +1049,11 @@ const PropertyCard: React.FC<{
               <Icon name="door_front" className="text-lg" />
             </div>
             <span className="text-xs font-black text-slate-600">
-              {toArabicDigits(property.units)} وحدة
+              {toArabicDigits(property.units, lang)} {t('unit_count')}
             </span>
           </div>
           <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-brand-dark transition-all">
-            <Icon name="arrow_back" className="text-lg" />
+            <Icon name={lang === 'ar' ? "arrow_back" : "arrow_forward"} className="text-lg" />
           </div>
         </div>
       </div>
@@ -1053,10 +1062,11 @@ const PropertyCard: React.FC<{
 };
 
 const AccountingScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const { t, lang } = useLang();
   const pieData = [
-    { name: "إيجارات", value: 70, color: "#C5A059" },
-    { name: "رسوم خدمات", value: 20, color: "#121212" },
-    { name: "أخرى", value: 10, color: "#94a3b8" },
+    { name: lang === 'ar' ? "إيجارات" : "Rents", value: 70, color: "#C5A059" },
+    { name: lang === 'ar' ? "رسوم خدمات" : "Service Fees", value: 20, color: "#121212" },
+    { name: lang === 'ar' ? "أخرى" : "Others", value: 10, color: "#94a3b8" },
   ];
 
   return (
@@ -1066,9 +1076,9 @@ const AccountingScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
           onClick={() => onSelect("manager_dashboard")}
           className="flex size-10 items-center justify-center rounded-xl bg-white/5 text-white hover:bg-white/10 transition-all"
         >
-          <Icon name="arrow_forward" className="text-2xl" />
+          <Icon name={lang === 'ar' ? "arrow_forward" : "arrow_back"} className="text-2xl" />
         </button>
-        <h2 className="text-lg font-black text-white">المحاسبة والمالية</h2>
+        <h2 className="text-lg font-black text-white">{t('accounting_finance')}</h2>
         <button className="flex size-10 items-center justify-center rounded-xl gold-gradient text-brand-dark shadow-lg shadow-primary/20">
           <Icon name="add" className="text-2xl" />
         </button>
@@ -1091,19 +1101,19 @@ const AccountingScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
                 />
               </div>
               <p className="text-xs font-black uppercase tracking-[0.2em]">
-                الرصيد المتاح
+                {t('available_balance')}
               </p>
             </div>
             <h3 className="text-5xl font-black tracking-tighter mt-2">
-              50,000{" "}
-              <span className="text-xl font-bold text-primary/60">ر.س</span>
+              {toArabicDigits("50,000", lang)}{" "}
+              <span className="text-xl font-bold text-primary/60">{t('currency')}</span>
             </h3>
             <div className="mt-6 flex items-center justify-between">
               <div className="flex gap-2 text-[10px] bg-white/5 px-4 py-2 rounded-full border border-white/10 backdrop-blur-sm font-bold text-slate-400">
-                <span>آخر تحديث: اليوم، ٩:٣٠ ص</span>
+                <span>{lang === 'ar' ? "آخر تحديث: اليوم، ٩:٣٠ ص" : "Last update: Today, 9:30 AM"}</span>
               </div>
               <button className="text-xs font-black text-primary underline underline-offset-4">
-                كشف حساب
+                {t('account_statement')}
               </button>
             </div>
           </div>
@@ -1119,11 +1129,11 @@ const AccountingScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
             </div>
             <div>
               <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">
-                إجمالي الدخل
+                {t('total_income')}
               </p>
               <p className="text-brand-dark text-2xl font-black tracking-tighter">
-                12,000{" "}
-                <span className="text-xs font-bold text-slate-400">ر.س</span>
+                {toArabicDigits("12,000", lang)}{" "}
+                <span className="text-xs font-bold text-slate-400">{t('currency')}</span>
               </p>
             </div>
           </motion.div>
@@ -1136,11 +1146,11 @@ const AccountingScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
             </div>
             <div>
               <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">
-                إجمالي المصروفات
+                {t('total_expenses')}
               </p>
               <p className="text-brand-dark text-2xl font-black tracking-tighter">
-                3,500{" "}
-                <span className="text-xs font-bold text-slate-400">ر.س</span>
+                {toArabicDigits("3,500", lang)}{" "}
+                <span className="text-xs font-bold text-slate-400">{t('currency')}</span>
               </p>
             </div>
           </motion.div>
@@ -1148,7 +1158,7 @@ const AccountingScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
 
         <section className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
           <h3 className="text-lg font-black text-brand-dark mb-8">
-            توزيع مصادر الدخل
+            {t('income_sources')}
           </h3>
           <div className="flex flex-col sm:flex-row items-center gap-8">
             <div className="w-full sm:w-1/2 h-48">
@@ -1188,7 +1198,7 @@ const AccountingScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
                     </span>
                   </div>
                   <span className="text-xs font-black text-brand-dark">
-                    {item.value}%
+                    {toArabicDigits(item.value, lang)}%
                   </span>
                 </div>
               ))}
@@ -1199,39 +1209,39 @@ const AccountingScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
         <div className="space-y-4">
           <div className="flex items-center justify-between px-1">
             <h3 className="text-xl font-black text-brand-dark">
-              آخر المعاملات
+              {t('recent_transactions')}
             </h3>
             <button className="text-primary text-xs font-black uppercase tracking-widest">
-              فلترة
+              {t('filter')}
             </button>
           </div>
           <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden divide-y divide-slate-50">
             {[
               {
-                title: "إيجار شقة ١٠٢",
-                subtitle: "محمد عبدالله • حوالة بنكية",
-                amount: "+ 4,500 ر.س",
-                time: "١٠:٣٠ ص",
+                title: lang === 'ar' ? "إيجار شقة ١٠٢" : "Rent Apt 102",
+                subtitle: lang === 'ar' ? "محمد عبدالله • حوالة بنكية" : "Mohamed Abdullah • Bank Transfer",
+                amount: `+ ${toArabicDigits("4,500", lang)} ${t('currency')}`,
+                time: lang === 'ar' ? "١٠:٣٠ ص" : "10:30 AM",
                 color: "text-emerald-600",
                 icon: "home_work",
                 iconBg: "bg-emerald-50",
                 iconColor: "text-emerald-600",
               },
               {
-                title: "صيانة تكييف",
-                subtitle: "شركة الصيانة السريعة • فيزا",
-                amount: "- 350 ر.س",
-                time: "٠٩:١٥ ص",
+                title: lang === 'ar' ? "صيانة تكييف" : "AC Maintenance",
+                subtitle: lang === 'ar' ? "شركة الصيانة السريعة • فيزا" : "Quick Maintenance Co • Visa",
+                amount: `- ${toArabicDigits("350", lang)} ${t('currency')}`,
+                time: lang === 'ar' ? "٠٩:١٥ ص" : "09:15 AM",
                 color: "text-rose-600",
                 icon: "build",
                 iconBg: "bg-rose-50",
                 iconColor: "text-rose-600",
               },
               {
-                title: "رسوم خدمات برج بيان",
-                subtitle: "سداد نقدي • مكتب الاستقبال",
-                amount: "+ 1,200 ر.س",
-                time: "أمس",
+                title: lang === 'ar' ? "رسوم خدمات برج بيان" : "Bayan Tower Service Fees",
+                subtitle: lang === 'ar' ? "سداد نقدي • مكتب الاستقبال" : "Cash Payment • Reception",
+                amount: `+ ${toArabicDigits("1,200", lang)} ${t('currency')}`,
+                time: lang === 'ar' ? "أمس" : "Yesterday",
                 color: "text-emerald-600",
                 icon: "payments",
                 iconBg: "bg-emerald-50",
@@ -1258,7 +1268,7 @@ const AccountingScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
                     </p>
                   </div>
                 </div>
-                <div className="text-left">
+                <div className={lang === 'ar' ? "text-left" : "text-right"}>
                   <p className={`text-base font-black ${item.color}`}>
                     {item.amount}
                   </p>
@@ -1278,6 +1288,7 @@ const AccountingScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
 };
 
 const InvoicesScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const { t, lang } = useLang();
   return (
     <div className="min-h-screen bg-[#FDFDFD] pb-24">
       <header className="flex items-center justify-between px-6 py-5 bg-brand-dark sticky top-0 z-30 shadow-xl">
@@ -1286,9 +1297,9 @@ const InvoicesScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
             onClick={() => onSelect("manager_dashboard")}
             className="flex items-center justify-center size-10 rounded-xl bg-white/5 text-white hover:bg-white/10 transition-all"
           >
-            <Icon name="arrow_forward" />
+            <Icon name={lang === 'ar' ? "arrow_forward" : "arrow_back"} />
           </button>
-          <h1 className="text-lg font-black text-white">الفواتير</h1>
+          <h1 className="text-lg font-black text-white">{t('invoices')}</h1>
         </div>
         <div className="flex items-center gap-3">
           <button className="flex items-center justify-center size-10 rounded-xl bg-white/5 text-white hover:bg-white/10 transition-all">
@@ -1314,11 +1325,11 @@ const InvoicesScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
             </div>
             <div className="relative z-10">
               <p className="text-xs text-slate-400 font-black uppercase tracking-widest mb-1">
-                المحصل الكلي
+                {t('total_collected')}
               </p>
               <h2 className="text-3xl font-black text-brand-dark tracking-tighter">
-                ٥٠,٠٠٠{" "}
-                <span className="text-sm font-bold text-slate-400">ر.س</span>
+                {toArabicDigits("٥٠,٠٠٠", lang)}{" "}
+                <span className="text-sm font-bold text-slate-400">{t('currency')}</span>
               </h2>
             </div>
           </div>
@@ -1334,18 +1345,18 @@ const InvoicesScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
             </div>
             <div className="relative z-10">
               <p className="text-xs text-slate-400 font-black uppercase tracking-widest mb-1">
-                الرصيد المستحق
+                {t('due_balance')}
               </p>
               <h2 className="text-3xl font-black text-brand-dark tracking-tighter">
-                ١٢,٥٠٠{" "}
-                <span className="text-sm font-bold text-slate-400">ر.س</span>
+                {toArabicDigits("١٢,٥٠٠", lang)}{" "}
+                <span className="text-sm font-bold text-slate-400">{t('currency')}</span>
               </h2>
             </div>
           </div>
         </div>
 
         <div className="flex gap-3 overflow-x-auto no-scrollbar py-2 -mx-6 px-6">
-          {["الكل", "مدفوعة", "غير مدفوعة", "مدفوعة جزئياً"].map((f, i) => (
+          {[t('all'), t('paid'), t('unpaid'), t('partially_paid')].map((f, i) => (
             <button
               key={i}
               className={cn(
@@ -1363,36 +1374,36 @@ const InvoicesScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
         <div className="space-y-4">
           <div className="flex items-center justify-between px-1">
             <h3 className="text-xl font-black text-brand-dark">
-              الفواتير الحديثة
+              {t('recent_invoices')}
             </h3>
             <button className="text-primary text-xs font-black uppercase tracking-widest">
-              عرض الكل
+              {t('view_all')}
             </button>
           </div>
           <div className="space-y-3">
             {[
               {
                 id: "#INV-2024-001",
-                tenant: "أحمد علي",
-                property: "عمارة النخيل",
-                amount: "4,500 ر.س",
-                status: "مدفوعة",
+                tenant: lang === 'ar' ? "أحمد علي" : "Ahmed Ali",
+                property: lang === 'ar' ? "عمارة النخيل" : "Al Nakheel Building",
+                amount: `${toArabicDigits("4,500", lang)} ${t('currency')}`,
+                status: t('paid'),
                 statusColor: "bg-emerald-100 text-emerald-700",
               },
               {
                 id: "#INV-2024-002",
-                tenant: "سارة محمد",
-                property: "برج الياسمين",
-                amount: "3,800 ر.س",
-                status: "غير مدفوعة",
+                tenant: lang === 'ar' ? "سارة محمد" : "Sarah Mohamed",
+                property: lang === 'ar' ? "برج الياسمين" : "Al Yasmeen Tower",
+                amount: `${toArabicDigits("3,800", lang)} ${t('currency')}`,
+                status: t('unpaid'),
                 statusColor: "bg-rose-100 text-rose-700",
               },
               {
                 id: "#INV-2024-003",
-                tenant: "خالد حسن",
-                property: "مجمع الروضة",
-                amount: "5,200 ر.س",
-                status: "مدفوعة جزئياً",
+                tenant: lang === 'ar' ? "خالد حسن" : "Khaled Hassan",
+                property: lang === 'ar' ? "مجمع الروضة" : "Al Rawdah Complex",
+                amount: `${toArabicDigits("5,200", lang)} ${t('currency')}`,
+                status: t('partially_paid'),
                 statusColor: "bg-amber-100 text-amber-700",
               },
             ].map((inv, i) => (
@@ -1414,7 +1425,7 @@ const InvoicesScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
                     </p>
                   </div>
                 </div>
-                <div className="text-left">
+                <div className={lang === 'ar' ? "text-left" : "text-right"}>
                   <p className="text-base font-black text-brand-dark">
                     {inv.amount}
                   </p>
@@ -1439,9 +1450,10 @@ const InvoicesScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
 };
 
 const MaintenanceScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const { t, lang } = useLang();
   const [activeTab, setActiveTab] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
-  const tabs = ["جديد", "قيد التنفيذ", "مكتمل"];
+  const tabs = [t('new'), t('in_progress'), t('completed')];
 
   const filteredRequests = MAINTENANCE_REQUESTS.filter((req) => {
     const matchesTab =
@@ -1465,9 +1477,9 @@ const MaintenanceScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
             onClick={() => onSelect("manager_dashboard")}
             className="flex items-center justify-center size-10 rounded-xl bg-white/5 text-white hover:bg-white/10 transition-all"
           >
-            <Icon name="arrow_forward" />
+            <Icon name={lang === 'ar' ? "arrow_forward" : "arrow_back"} />
           </button>
-          <h1 className="text-lg font-black text-white">الصيانة</h1>
+          <h1 className="text-lg font-black text-white">{t('maintenance')}</h1>
         </div>
         <button
           onClick={() => onSelect("new_maintenance")}
@@ -1500,12 +1512,12 @@ const MaintenanceScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
         <div className="relative group">
           <Icon
             name="search"
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors"
+            className={cn("absolute top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors", lang === 'ar' ? "right-4" : "left-4")}
           />
           <input
             type="text"
-            placeholder="البحث عن عقار، وحدة، أو نوع المشكلة..."
-            className="w-full bg-white border border-slate-100 rounded-[1.5rem] py-4 pr-12 pl-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold"
+            placeholder={lang === 'ar' ? "البحث عن عقار، وحدة، أو نوع المشكلة..." : "Search for property, unit, or issue type..."}
+            className={cn("w-full bg-white border border-slate-100 rounded-[1.5rem] py-4 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-bold", lang === 'ar' ? "pr-12 pl-4" : "pl-12 pr-4")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -1519,15 +1531,15 @@ const MaintenanceScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
                 <Icon name="warning" className="text-lg" />
               </div>
               <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
-                عاجل
+                {t('urgent')}
               </p>
             </div>
             <p className="text-3xl font-black text-brand-dark relative z-10">
-              {
+              {toArabicDigits(
                 MAINTENANCE_REQUESTS.filter(
                   (r) => r.priority === "high" && r.status !== "completed",
-                ).length
-              }
+                ).length, lang
+              )}
             </p>
           </div>
           <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 relative overflow-hidden group">
@@ -1537,11 +1549,11 @@ const MaintenanceScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
                 <Icon name="schedule" className="text-lg" />
               </div>
               <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
-                متوسط الانتظار
+                {t('avg_wait')}
               </p>
             </div>
             <p className="text-3xl font-black text-brand-dark relative z-10">
-              2 يوم
+              {toArabicDigits("2", lang)} {t('days')}
             </p>
           </div>
         </div>
@@ -1580,10 +1592,10 @@ const MaintenanceScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
                         )}
                       >
                         {req.priority === "high"
-                          ? "عالي الأهمية"
+                          ? t('high_priority')
                           : req.priority === "medium"
-                            ? "متوسط"
-                            : "منخفض"}
+                            ? t('medium_priority')
+                            : t('low_priority')}
                       </span>
                     </div>
                     <div className="flex items-center gap-3 mb-4 p-3 bg-slate-50 rounded-2xl">
@@ -1620,8 +1632,8 @@ const MaintenanceScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
                         </span>
                       </div>
                       <button className="text-xs font-black text-primary flex items-center gap-1 group-hover:gap-2 transition-all">
-                        التفاصيل
-                        <Icon name="chevron_left" className="text-lg" />
+                        {t('details')}
+                        <Icon name={lang === 'ar' ? "chevron_left" : "chevron_right"} className="text-lg" />
                       </button>
                     </div>
                   </div>
@@ -3673,28 +3685,33 @@ const UnitsManagementScreen = ({
 }: {
   onSelect: (v: View) => void;
 }) => {
-  const [activeFilter, setActiveFilter] = useState("الكل");
+  const { t, lang } = useLang();
+  const [activeFilter, setActiveFilter] = useState(t('all'));
   const [searchQuery, setSearchQuery] = useState("");
-  const [propertyFilter, setPropertyFilter] = useState("الكل");
-  const [typeFilter, setTypeFilter] = useState("الكل");
+  const [propertyFilter, setPropertyFilter] = useState(t('all'));
+  const [typeFilter, setTypeFilter] = useState(t('all'));
 
-  const filters = ["الكل", "شاغرة", "مؤجرة", "تحت الصيانة"];
+  const filters = [t('all'), t('vacant_unit'), t('rented_unit'), t('unit_maintenance')];
   const properties = [
-    "الكل",
+    t('all'),
     ...Array.from(new Set(UNITS.map((u) => u.property))),
   ];
-  const types = ["الكل", ...Array.from(new Set(UNITS.map((u) => u.type)))];
+  const types = [t('all'), ...Array.from(new Set(UNITS.map((u) => u.type)))];
 
   const filteredUnits = UNITS.filter((unit) => {
     const matchesStatus =
-      activeFilter === "الكل" || unit.status === activeFilter;
+      activeFilter === t('all') || 
+      (activeFilter === t('vacant_unit') && unit.status === "شاغرة") ||
+      (activeFilter === t('rented_unit') && unit.status === "مؤجرة") ||
+      (activeFilter === t('unit_maintenance') && unit.status === "تحت الصيانة");
+    
     const matchesProperty =
-      propertyFilter === "الكل" || unit.property === propertyFilter;
-    const matchesType = typeFilter === "الكل" || unit.type === typeFilter;
+      propertyFilter === t('all') || unit.property === propertyFilter;
+    const matchesType = typeFilter === t('all') || unit.type === typeFilter;
     const matchesSearch =
-      unit.property.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      unit.id.toString().includes(searchQuery) ||
-      unit.type.toLowerCase().includes(searchQuery.toLowerCase());
+      (unit.property || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (unit.id || "").toString().includes(searchQuery) ||
+      (unit.type || "").toLowerCase().includes(searchQuery.toLowerCase());
     return matchesStatus && matchesProperty && matchesType && matchesSearch;
   });
 
@@ -3705,25 +3722,26 @@ const UnitsManagementScreen = ({
           onClick={() => onSelect("manager_dashboard")}
           className="p-2 rounded-full hover:bg-slate-100 transition-colors"
         >
-          <Icon name="arrow_forward" className="text-2xl" />
+          <Icon name={lang === 'ar' ? "arrow_forward" : "arrow_back"} className="text-2xl" />
         </button>
-        <h2 className="text-lg font-bold flex-1 text-center pr-12">
-          إدارة الوحدات
+        <h2 className="text-lg font-bold flex-1 text-center">
+          {t('manage_units')}
         </h2>
+        <div className="w-10"></div>
       </header>
       <main className="p-4 space-y-4">
         {/* Search Bar */}
         <div className="relative">
           <Icon
             name="search"
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+            className={cn("absolute top-1/2 -translate-y-1/2 text-slate-400", lang === 'ar' ? "right-4" : "left-4")}
           />
           <input
             type="text"
-            placeholder="ابحث عن وحدة برقمها، نوعها أو اسم العقار..."
+            placeholder={lang === 'ar' ? "ابحث عن وحدة برقمها، نوعها أو اسم العقار..." : "Search for unit by number, type or property name..."}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white border border-slate-100 rounded-2xl py-3 pr-12 pl-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
+            className={cn("w-full bg-white border border-slate-100 rounded-2xl py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm", lang === 'ar' ? "pr-12 pl-4" : "pl-12 pr-4")}
           />
         </div>
 
@@ -3734,12 +3752,12 @@ const UnitsManagementScreen = ({
             onChange={(e) => setPropertyFilter(e.target.value)}
             className="bg-white border border-slate-200 text-slate-600 text-xs rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20"
           >
-            <option disabled value="الكل">
-              العقار
+            <option disabled value={t('all')}>
+              {t('property')}
             </option>
             {properties.map((p) => (
               <option key={p} value={p}>
-                {p === "الكل" ? "كل العقارات" : p}
+                {p === t('all') ? t('all_properties') : p}
               </option>
             ))}
           </select>
@@ -3749,12 +3767,12 @@ const UnitsManagementScreen = ({
             onChange={(e) => setTypeFilter(e.target.value)}
             className="bg-white border border-slate-200 text-slate-600 text-xs rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20"
           >
-            <option disabled value="الكل">
-              النوع
+            <option disabled value={t('all')}>
+              {t('type')}
             </option>
-            {types.map((t) => (
-              <option key={t} value={t}>
-                {t === "الكل" ? "كل الأنواع" : t}
+            {types.map((t_val) => (
+              <option key={t_val} value={t_val}>
+                {t_val === t('all') ? t('all_types') : t_val}
               </option>
             ))}
           </select>
@@ -3785,29 +3803,32 @@ const UnitsManagementScreen = ({
                 <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
                   <Icon
                     name={
-                      unit.type === "شقة"
+                      unit.type === "شقة" || unit.type === "Apartment"
                         ? "apartment"
-                        : unit.type === "مكتب"
+                        : unit.type === "مكتب" || unit.type === "Office"
                           ? "corporate_fare"
                           : "home"
                     }
                   />
                 </div>
-                <div>
+                <div className={cn(lang === 'ar' ? "text-right" : "text-left")}>
                   <h4 className="font-bold">
-                    وحدة {toArabicDigits(unit.id)} - {unit.type}
+                    {t('unit')} {toArabicDigits(unit.id, lang)} - {unit.type === "شقة" ? t('apartment') : unit.type === "مكتب" ? t('office') : unit.type}
                   </h4>
                   <p className="text-[10px] text-gray-500">{unit.property}</p>
                 </div>
               </div>
-              <div className="text-left">
+              <div className={cn(lang === 'ar' ? "text-left" : "text-right")}>
                 <p className="text-sm font-bold text-primary">
-                  {toArabicDigits(unit.rent)} ر.س
+                  {toArabicDigits(unit.rent, lang)} {t('currency')}
                 </p>
                 <span
-                  className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${unit.status === "مؤجرة" ? "bg-green-100 text-green-700" : unit.status === "شاغرة" ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"}`}
+                  className={cn(
+                    "text-[9px] font-bold px-2 py-0.5 rounded-full",
+                    unit.status === "مؤجرة" ? "bg-green-100 text-green-700" : unit.status === "شاغرة" ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"
+                  )}
                 >
-                  {unit.status}
+                  {unit.status === "شاغرة" ? t('vacant_unit') : unit.status === "مؤجرة" ? t('rented_unit') : t('unit_maintenance')}
                 </span>
               </div>
             </motion.div>
@@ -3816,7 +3837,7 @@ const UnitsManagementScreen = ({
         {filteredUnits.length === 0 && (
           <div className="py-12 text-center">
             <Icon name="search_off" className="text-4xl text-slate-300 mb-2" />
-            <p className="text-slate-400 text-sm">لا توجد وحدات بهذه الحالة</p>
+            <p className="text-slate-400 text-sm">{t('no_matching_properties')}</p>
           </div>
         )}
       </main>
@@ -3830,6 +3851,7 @@ const ContractsManagementScreen = ({
 }: {
   onSelect: (v: View) => void;
 }) => {
+  const { t, lang } = useLang();
   return (
     <div className="min-h-screen bg-[#f8f8f5] pb-24">
       <header className="flex items-center justify-between p-4 bg-white sticky top-0 z-10 shadow-sm border-b border-primary/10">
@@ -3837,30 +3859,31 @@ const ContractsManagementScreen = ({
           onClick={() => onSelect("manager_dashboard")}
           className="p-2 rounded-full hover:bg-slate-100 transition-colors"
         >
-          <Icon name="arrow_forward" className="text-2xl" />
+          <Icon name={lang === 'ar' ? "arrow_forward" : "arrow_back"} className="text-2xl" />
         </button>
-        <h2 className="text-lg font-bold flex-1 text-center pr-12">
-          إدارة العقود
+        <h2 className="text-lg font-bold flex-1 text-center">
+          {t('manage_contracts')}
         </h2>
+        <div className="w-10"></div>
       </header>
       <main className="p-4 space-y-4">
         {[
           {
-            tenant: "محمد العتيبي",
-            unit: "شقة ١٠٢",
-            end: "٢٠٢٤/١٢/٣١",
+            tenant: lang === 'ar' ? "محمد العتيبي" : "Mohammed Al-Otaibi",
+            unit: lang === 'ar' ? "شقة ١٠٢" : "Apartment 102",
+            end: toArabicDigits("2024/12/31", lang),
             status: "ساري",
           },
           {
-            tenant: "شركة الأفق",
-            unit: "مكتب ٥",
-            end: "٢٠٢٤/٠٦/١٥",
+            tenant: lang === 'ar' ? "شركة الأفق" : "Horizon Co.",
+            unit: lang === 'ar' ? "مكتب ٥" : "Office 5",
+            end: toArabicDigits("2024/06/15", lang),
             status: "ينتهي قريباً",
           },
           {
-            tenant: "سارة العمري",
-            unit: "فيلا ١٢",
-            end: "٢٠٢٥/٠١/٢٠",
+            tenant: lang === 'ar' ? "سارة العمري" : "Sarah Al-Omari",
+            unit: lang === 'ar' ? "فيلا ١٢" : "Villa 12",
+            end: toArabicDigits("2025/01/20", lang),
             status: "ساري",
           },
         ].map((contract, i) => (
@@ -3873,23 +3896,26 @@ const ContractsManagementScreen = ({
                 <div className="w-10 h-10 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center">
                   <Icon name="description" />
                 </div>
-                <div>
+                <div className={cn(lang === 'ar' ? "text-right" : "text-left")}>
                   <h4 className="font-bold">{contract.tenant}</h4>
                   <p className="text-xs text-gray-500">{contract.unit}</p>
                 </div>
               </div>
               <span
-                className={`text-[10px] font-bold px-2 py-1 rounded-full ${contract.status === "ساري" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+                className={cn(
+                  "text-[10px] font-bold px-2 py-1 rounded-full",
+                  contract.status === "ساري" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                )}
               >
-                {contract.status}
+                {contract.status === "ساري" ? t('active') : t('expiring_soon')}
               </span>
             </div>
             <div className="flex justify-between items-center pt-3 border-t border-gray-50">
               <p className="text-[10px] text-gray-400">
-                تاريخ الانتهاء: {contract.end}
+                {t('expiry_date')}: {contract.end}
               </p>
               <button className="text-primary text-xs font-bold flex items-center gap-1">
-                تجديد <Icon name="refresh" className="text-xs" />
+                {t('renew')} <Icon name="refresh" className="text-xs" />
               </button>
             </div>
           </div>
@@ -3901,6 +3927,7 @@ const ContractsManagementScreen = ({
 };
 
 const TechnicalDocsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const { t, lang } = useLang();
   return (
     <div className="min-h-screen bg-[#f8f8f5] pb-24">
       <header className="flex items-center justify-between p-4 bg-white sticky top-0 z-10 shadow-sm border-b border-primary/10">
@@ -3908,40 +3935,41 @@ const TechnicalDocsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
           onClick={() => onSelect("manager_dashboard")}
           className="p-2 rounded-full hover:bg-slate-100 transition-colors"
         >
-          <Icon name="arrow_forward" className="text-2xl" />
+          <Icon name={lang === 'ar' ? "arrow_forward" : "arrow_back"} className="text-2xl" />
         </button>
-        <h2 className="text-lg font-bold flex-1 text-center pr-12">
-          التوثيق التقني
+        <h2 className="text-lg font-bold flex-1 text-center">
+          {t('technical_docs')}
         </h2>
+        <div className="w-10"></div>
       </header>
       <main className="p-4 space-y-6">
         <div className="text-center py-6">
-          <h3 className="text-2xl font-bold mb-2">تحميل الوثائق التقنية</h3>
+          <h3 className="text-2xl font-bold mb-2">{t('download_docs')}</h3>
           <p className="text-sm text-gray-500">
-            احصل على الدليل الشامل للمطورين والمهندسين
+            {t('docs_desc')}
           </p>
         </div>
         <div className="space-y-3">
           {[
             {
-              title: "بنية النظام",
+              title: t('system_arch'),
               icon: "account_tree",
-              desc: "نظرة عامة على الهيكل المعماري",
+              desc: t('arch_desc'),
             },
             {
-              title: "نقاط الـ API",
+              title: t('api_endpoints'),
               icon: "api",
-              desc: "توثيق كامل للطلبات والاستجابات",
+              desc: t('api_desc'),
             },
             {
-              title: "مخطط البيانات",
+              title: t('data_schema'),
               icon: "database",
-              desc: "جداول العلاقات والمفاتيح",
+              desc: t('schema_desc'),
             },
             {
-              title: "بروتوكولات الأمان",
+              title: t('security_protocols'),
               icon: "security",
-              desc: "معايير التشفير والوصول",
+              desc: t('security_desc'),
             },
           ].map((doc, i) => (
             <div
@@ -3951,7 +3979,7 @@ const TechnicalDocsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
               <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center">
                 <Icon name={doc.icon} />
               </div>
-              <div className="flex-1">
+              <div className={cn("flex-1", lang === 'ar' ? "text-right" : "text-left")}>
                 <h4 className="font-bold text-sm">{doc.title}</h4>
                 <p className="text-[10px] text-gray-400">{doc.desc}</p>
               </div>
@@ -3959,7 +3987,7 @@ const TechnicalDocsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
           ))}
         </div>
         <button className="w-full py-4 bg-orange-600 text-white font-bold rounded-2xl shadow-lg flex items-center justify-center gap-2">
-          <Icon name="download" /> تحميل الدليل التقني (PDF)
+          <Icon name="download" /> {t('download_pdf')}
         </button>
       </main>
       <BottomNav active="manager_dashboard" onSelect={onSelect} />
@@ -3968,6 +3996,7 @@ const TechnicalDocsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
 };
 
 const NotificationsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const { t, lang } = useLang();
   return (
     <div className="min-h-screen bg-[#f8f8f5] pb-24">
       <header className="flex items-center justify-between p-4 bg-white sticky top-0 z-10 shadow-sm border-b border-primary/10">
@@ -3975,42 +4004,43 @@ const NotificationsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
           onClick={() => onSelect("manager_dashboard")}
           className="p-2 rounded-full hover:bg-slate-100 transition-colors"
         >
-          <Icon name="arrow_forward" className="text-2xl" />
+          <Icon name={lang === 'ar' ? "arrow_forward" : "arrow_back"} className="text-2xl" />
         </button>
-        <h2 className="text-lg font-bold flex-1 text-center pr-12">
-          مركز التنبيهات
+        <h2 className="text-lg font-bold flex-1 text-center">
+          {t('notifications_center')}
         </h2>
+        <div className="w-10"></div>
       </header>
       <main className="p-4 space-y-3">
         {[
           {
-            title: "تذكير: عقد ينتهي قريباً",
-            desc: "عقد المستأجر محمد العتيبي ينتهي خلال 30 يوم",
-            time: "منذ ساعة",
+            title: lang === 'ar' ? "تذكير: عقد ينتهي قريباً" : "Reminder: Contract Expiring Soon",
+            desc: lang === 'ar' ? "عقد المستأجر محمد العتيبي ينتهي خلال 30 يوم" : "Tenant Mohammed Al-Otaibi's contract expires in 30 days",
+            time: lang === 'ar' ? "منذ ساعة" : "1 hour ago",
             icon: "event_busy",
             color: "text-red-600",
             bg: "bg-red-50",
           },
           {
-            title: "تم استلام دفعة جديدة",
-            desc: "تم تحصيل إيجار شقة 102 بنجاح",
-            time: "منذ 3 ساعات",
+            title: lang === 'ar' ? "تم استلام دفعة جديدة" : "New Payment Received",
+            desc: lang === 'ar' ? "تم تحصيل إيجار شقة 102 بنجاح" : "Rent for Apartment 102 collected successfully",
+            time: lang === 'ar' ? "منذ 3 ساعات" : "3 hours ago",
             icon: "payments",
             color: "text-green-600",
             bg: "bg-green-50",
           },
           {
-            title: "طلب صيانة مكتمل",
-            desc: "تم إغلاق بلاغ صيانة المكيف في فيلا 7",
-            time: "أمس",
+            title: lang === 'ar' ? "طلب صيانة مكتمل" : "Maintenance Request Completed",
+            desc: lang === 'ar' ? "تم إغلاق بلاغ صيانة المكيف في فيلا 7" : "AC maintenance request for Villa 7 closed",
+            time: lang === 'ar' ? "أمس" : "Yesterday",
             icon: "task_alt",
             color: "text-blue-600",
             bg: "bg-blue-50",
           },
           {
-            title: "تنبيه أمان",
-            desc: "تم تسجيل دخول جديد لحسابك من جهاز غير معروف",
-            time: "أمس",
+            title: lang === 'ar' ? "تنبيه أمان" : "Security Alert",
+            desc: lang === 'ar' ? "تم تسجيل دخول جديد لحسابك من جهاز غير معروف" : "New login to your account from unknown device",
+            time: lang === 'ar' ? "أمس" : "Yesterday",
             icon: "security",
             color: "text-orange-600",
             bg: "bg-orange-50",
@@ -4025,7 +4055,7 @@ const NotificationsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
             >
               <Icon name={notif.icon} />
             </div>
-            <div className="flex-1">
+            <div className={cn("flex-1", lang === 'ar' ? "text-right" : "text-left")}>
               <div className="flex justify-between items-start mb-1">
                 <h4 className="font-bold text-sm">{notif.title}</h4>
                 <span className="text-[10px] text-gray-400">{notif.time}</span>
@@ -4051,6 +4081,7 @@ const ReportLayout = ({
   title: string;
   onBack: () => void;
 }) => {
+  const { t, lang } = useLang();
   const handlePrint = () => {
     try {
       window.print();
@@ -4078,14 +4109,14 @@ const ReportLayout = ({
           onClick={onBack}
           className="p-2 rounded-full hover:bg-slate-100 transition-colors"
         >
-          <Icon name="arrow_forward" className="text-2xl" />
+          <Icon name={lang === 'ar' ? "arrow_forward" : "arrow_back"} className="text-2xl" />
         </button>
-        <h2 className="text-lg font-bold flex-1 text-center pr-12">{title}</h2>
+        <h2 className="text-lg font-bold flex-1 text-center">{title}</h2>
         <div className="flex gap-2">
           <button
             onClick={handlePrint}
             className="p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary/20 transition-colors"
-            title="طباعة التقرير"
+            title={t('print_report')}
           >
             <Icon name="print" />
           </button>
@@ -4098,7 +4129,7 @@ const ReportLayout = ({
           <div className="relative z-10 flex flex-col items-center">
             <Logo className="size-28" />
             <h1 className="mt-4 text-2xl font-black text-brand-dark">
-              شركة رمز الإبداع لإدارة الأملاك
+              {t('company_name')}
             </h1>
           </div>
           {/* Decorative Arcs */}
@@ -4113,7 +4144,7 @@ const ReportLayout = ({
             {title}
           </h2>
           <p className="text-xs text-slate-400 mt-2">
-            تاريخ التقرير: {new Date().toLocaleDateString("ar-SA")}
+            {t('report_date')}: {new Date().toLocaleDateString(lang === 'ar' ? "ar-SA" : "en-US")}
           </p>
         </div>
         {children}
@@ -4162,48 +4193,49 @@ const FinancialReportScreen = ({
 }: {
   onSelect: (v: View) => void;
 }) => {
+  const { t, lang } = useLang();
   return (
     <ReportLayout
-      title="التقرير المالي السنوي"
+      title={t('annual_financial_report')}
       onBack={() => onSelect("reports")}
     >
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 print:border-none print:shadow-none">
-        <p className="text-xs text-gray-500 mb-1">إجمالي الأرباح لعام 2023</p>
+        <p className="text-xs text-gray-500 mb-1">{t('total_profit_2023')}</p>
         <h3 className="text-3xl font-extrabold text-brand-dark">
-          1,245,000 <span className="text-sm font-normal">ر.س</span>
+          {toArabicDigits("1,245,000", lang)} <span className="text-sm font-normal">{t('currency')}</span>
         </h3>
         <div className="mt-4 h-2 w-full bg-slate-100 rounded-full overflow-hidden print:hidden">
           <div className="h-full bg-primary w-3/4"></div>
         </div>
         <p className="text-[10px] text-gray-400 mt-2">
-          تم تحصيل 75% من الهدف السنوي
+          {t('collected_target_desc')}
         </p>
       </div>
 
       <div className="space-y-3">
-        <h3 className="font-bold text-brand-dark">ملخص الأرباع</h3>
+        <h3 className="font-bold text-brand-dark">{t('quarterly_summary')}</h3>
         <div className="grid grid-cols-1 gap-3">
           {[
             {
-              label: "الربع الأول",
+              label: t('q1'),
               val: "310,000",
               trend: "+5%",
               color: "text-emerald-500",
             },
             {
-              label: "الربع الثاني",
+              label: t('q2'),
               val: "285,000",
               trend: "-2%",
               color: "text-rose-500",
             },
             {
-              label: "الربع الثالث",
+              label: t('q3'),
               val: "340,000",
               trend: "+8%",
               color: "text-emerald-500",
             },
             {
-              label: "الربع الرابع",
+              label: t('q4'),
               val: "310,000",
               trend: "+4%",
               color: "text-emerald-500",
@@ -4214,10 +4246,10 @@ const FinancialReportScreen = ({
               className="bg-white p-4 rounded-xl border border-gray-100 flex items-center justify-between print:border-slate-200"
             >
               <span className="text-sm font-bold">{q.label}</span>
-              <div className="text-left">
-                <p className="text-sm font-bold text-brand-dark">{q.val} ر.س</p>
+              <div className={cn(lang === 'ar' ? "text-left" : "text-right")}>
+                <p className="text-sm font-bold text-brand-dark">{toArabicDigits(q.val, lang)} {t('currency')}</p>
                 <span className={`text-[10px] font-bold ${q.color}`}>
-                  {q.trend}
+                  {toArabicDigits(q.trend, lang)}
                 </span>
               </div>
             </div>
@@ -4226,15 +4258,15 @@ const FinancialReportScreen = ({
       </div>
 
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 print:border-slate-200">
-        <h3 className="font-bold mb-4">توزيع الإيرادات</h3>
+        <h3 className="font-bold mb-4">{t('revenue_distribution')}</h3>
         <div className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <PieChart>
               <Pie
                 data={[
-                  { name: "إيجارات سكنية", value: 65 },
-                  { name: "إيجارات تجارية", value: 25 },
-                  { name: "رسوم خدمات", value: 10 },
+                  { name: t('residential_rents'), value: 65 },
+                  { name: t('commercial_rents'), value: 25 },
+                  { name: t('service_fees'), value: 10 },
                 ]}
                 cx="50%"
                 cy="50%"
@@ -4258,38 +4290,39 @@ const FinancialReportScreen = ({
 };
 
 const ZakatTaxScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
+  const { t, lang } = useLang();
   return (
-    <ReportLayout title="الزكاة والضريبة" onBack={() => onSelect("reports")}>
+    <ReportLayout title={t('zakat_tax')} onBack={() => onSelect("reports")}>
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 print:border-slate-200">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-brand-dark">إقرار الربع الحالي</h3>
+          <h3 className="font-bold text-brand-dark">{t('current_quarter_declaration')}</h3>
           <span className="text-[10px] font-bold bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full print:border print:border-orange-200">
-            بانتظار التقديم
+            {t('pending_submission')}
           </span>
         </div>
         <div className="space-y-4">
           <div className="flex justify-between">
             <span className="text-sm text-gray-500">
-              ضريبة القيمة المضافة (15%)
+              {t('vat_15')}
             </span>
             <span className="text-sm font-bold text-brand-dark">
-              45,200 ر.س
+              {toArabicDigits("45,200", lang)} {t('currency')}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-sm text-gray-500">الزكاة التقديرية</span>
+            <span className="text-sm text-gray-500">{t('estimated_zakat')}</span>
             <span className="text-sm font-bold text-brand-dark">
-              12,800 ر.س
+              {toArabicDigits("12,800", lang)} {t('currency')}
             </span>
           </div>
           <div className="pt-4 border-t border-gray-50 flex justify-between">
-            <span className="font-bold text-brand-dark">الإجمالي المستحق</span>
-            <span className="font-bold text-primary text-lg">58,000 ر.س</span>
+            <span className="font-bold text-brand-dark">{t('total_due')}</span>
+            <span className="font-bold text-primary text-lg">{toArabicDigits("58,000", lang)} {t('currency')}</span>
           </div>
         </div>
       </div>
       <button className="w-full py-4 bg-primary text-brand-dark font-black rounded-2xl shadow-lg shadow-primary/20 print:hidden">
-        تقديم الإقرار الضريبي
+        {t('submit_tax_declaration')}
       </button>
     </ReportLayout>
   );
@@ -4300,21 +4333,22 @@ const EjarIntegrationScreen = ({
 }: {
   onSelect: (v: View) => void;
 }) => {
+  const { t, lang } = useLang();
   return (
-    <ReportLayout title="تكامل منصة إيجار" onBack={() => onSelect("reports")}>
+    <ReportLayout title={t('ejar_integration')} onBack={() => onSelect("reports")}>
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 text-center print:border-slate-200">
         <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4 print:border print:border-green-100">
           <Icon name="verified" className="text-green-600 text-4xl" />
         </div>
-        <h3 className="text-lg font-bold text-brand-dark">حالة الربط: متصل</h3>
-        <p className="text-xs text-gray-400 mt-1">آخر مزامنة: منذ ١٠ دقائق</p>
+        <h3 className="text-lg font-bold text-brand-dark">{t('connection_status')}: {t('connected')}</h3>
+        <p className="text-xs text-gray-400 mt-1">{t('last_sync')}: {lang === 'ar' ? "منذ ١٠ دقائق" : "10 minutes ago"}</p>
       </div>
       <div className="space-y-3">
-        <h3 className="font-bold text-brand-dark">إحصائيات المزامنة</h3>
+        <h3 className="font-bold text-brand-dark">{t('sync_stats')}</h3>
         {[
-          { label: "العقود المزامنة", val: "145" },
-          { label: "بانتظار المزامنة", val: "3" },
-          { label: "أخطاء المزامنة", val: "0" },
+          { label: t('synced_contracts'), val: "145" },
+          { label: t('pending_sync'), val: "3" },
+          { label: t('sync_errors'), val: "0" },
         ].map((stat, i) => (
           <div
             key={i}
@@ -4323,12 +4357,12 @@ const EjarIntegrationScreen = ({
             <span className="text-sm font-medium text-slate-600">
               {stat.label}
             </span>
-            <span className="font-bold text-brand-dark">{stat.val}</span>
+            <span className="font-bold text-brand-dark">{toArabicDigits(stat.val, lang)}</span>
           </div>
         ))}
       </div>
       <button className="w-full py-4 border-2 border-primary text-primary font-black rounded-2xl flex items-center justify-center gap-2 hover:bg-primary/5 transition-colors print:hidden">
-        <Icon name="sync" /> مزامنة البيانات الآن
+        <Icon name="sync" /> {t('sync_data_now')}
       </button>
     </ReportLayout>
   );
@@ -4339,6 +4373,7 @@ const TechPerformanceScreen = ({
 }: {
   onSelect: (v: View) => void;
 }) => {
+  const { t, lang } = useLang();
   return (
     <div className="min-h-screen bg-[#f8f8f5] pb-24">
       <header className="flex items-center justify-between p-4 bg-white sticky top-0 z-10 shadow-sm border-b border-primary/10">
@@ -4346,22 +4381,23 @@ const TechPerformanceScreen = ({
           onClick={() => onSelect("reports")}
           className="p-2 rounded-full hover:bg-slate-100 transition-colors"
         >
-          <Icon name="arrow_forward" className="text-2xl" />
+          <Icon name={lang === 'ar' ? "arrow_forward" : "arrow_back"} className="text-2xl" />
         </button>
-        <h2 className="text-lg font-bold flex-1 text-center pr-12">
-          أداء الفنيين
+        <h2 className="text-lg font-bold flex-1 text-center">
+          {t('tech_performance')}
         </h2>
+        <div className="w-10"></div>
       </header>
       <main className="p-4 space-y-4">
         {[
-          { name: "أحمد الكهربائي", tasks: 24, rating: 4.8, status: "متاح" },
+          { name: lang === 'ar' ? "أحمد الكهربائي" : "Ahmed Electrician", tasks: 24, rating: 4.8, status: "متاح" },
           {
-            name: "شركة السباكة الذهبية",
+            name: lang === 'ar' ? "شركة السباكة الذهبية" : "Golden Plumbing Co.",
             tasks: 18,
             rating: 4.5,
             status: "مشغول",
           },
-          { name: "فني تكييف النخبة", tasks: 32, rating: 4.9, status: "متاح" },
+          { name: lang === 'ar' ? "فني تكييف النخبة" : "Elite AC Tech", tasks: 32, rating: 4.9, status: "متاح" },
         ].map((tech, i) => (
           <div
             key={i}
@@ -4370,22 +4406,25 @@ const TechPerformanceScreen = ({
             <div className="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center">
               <Icon name="person" />
             </div>
-            <div className="flex-1">
+            <div className={cn("flex-1", lang === 'ar' ? "text-right" : "text-left")}>
               <h4 className="font-bold text-sm">{tech.name}</h4>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-[10px] text-gray-400">
-                  {tech.tasks} مهمة مكتملة
+                  {toArabicDigits(tech.tasks, lang)} {t('completed_tasks')}
                 </span>
                 <span className="text-[10px] text-yellow-500 flex items-center gap-0.5">
                   <Icon name="star" className="text-[12px] filled" />{" "}
-                  {tech.rating}
+                  {toArabicDigits(tech.rating, lang)}
                 </span>
               </div>
             </div>
             <span
-              className={`text-[10px] font-bold px-2 py-1 rounded-full ${tech.status === "متاح" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}
+              className={cn(
+                "text-[10px] font-bold px-2 py-1 rounded-full",
+                tech.status === "متاح" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
+              )}
             >
-              {tech.status}
+              {tech.status === "متاح" ? t('available') : t('busy')}
             </span>
           </div>
         ))}
@@ -7513,18 +7552,23 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen font-sans">
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentView}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.2 }}
-        >
-          {renderView()}
-        </motion.div>
-      </AnimatePresence>
-    </div>
+    <LanguageProvider>
+      <div className="min-h-screen font-sans">
+        <div className="fixed top-4 right-4 z-[9999]">
+          <LanguageToggle />
+        </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentView}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.2 }}
+          >
+            {renderView()}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </LanguageProvider>
   );
 }
