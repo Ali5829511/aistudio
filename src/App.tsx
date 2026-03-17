@@ -423,7 +423,7 @@ const ManagerDashboard = ({ onSelect, onSelectProperty, properties }: { onSelect
                 </div>
               </div>
               <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <LineChart data={chartData}>
                     <defs>
                       <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
@@ -464,7 +464,7 @@ const ManagerDashboard = ({ onSelect, onSelectProperty, properties }: { onSelect
                   <span className="text-3xl font-black text-brand-dark">٩٢٪</span>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">مشغول</span>
                 </div>
-                <ResponsiveContainer width="100%" height="200">
+                <ResponsiveContainer width="100%" height="200" minWidth={0}>
                   <PieChart>
                     <Pie
                       data={[
@@ -734,7 +734,7 @@ const AccountingScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
           <h3 className="text-lg font-black text-brand-dark mb-8">توزيع مصادر الدخل</h3>
           <div className="flex flex-col sm:flex-row items-center gap-8">
             <div className="w-full sm:w-1/2 h-48">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <PieChart>
                   <Pie
                     data={pieData}
@@ -1269,7 +1269,7 @@ const TenantSatisfactionReportScreen = ({ onSelect }: { onSelect: (v: View) => v
             </div>
           </div>
           <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <BarChart data={satisfactionData} layout="vertical" margin={{ left: 20, right: 30 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f0f0f0" />
                 <XAxis type="number" domain={[0, 5]} hide />
@@ -1346,6 +1346,18 @@ const TenantSatisfactionReportScreen = ({ onSelect }: { onSelect: (v: View) => v
 };
 
 const PropertyDetailsScreen = ({ onSelect, property }: { onSelect: (v: View) => void, property: any }) => {
+  if (!property) {
+    return (
+      <div className="min-h-screen bg-[#f8f7f6] flex flex-col items-center justify-center p-4">
+        <Icon name="error_outline" className="text-4xl text-slate-400 mb-4" />
+        <p className="text-slate-500 mb-4">لم يتم تحديد عقار</p>
+        <button onClick={() => onSelect('manager_dashboard')} className="px-6 py-2 bg-primary text-white rounded-xl font-bold">
+          العودة للرئيسية
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#f8f7f6] pb-24">
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-primary/10 px-4 pt-12 pb-4 flex items-center justify-between">
@@ -2138,7 +2150,7 @@ const AddPropertyScreen = ({ onSelect, properties }: { onSelect: (v: View) => vo
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
+      const newFiles = Array.from(e.target.files) as File[];
       setImages(prev => [...prev, ...newFiles]);
       
       const newPreviews = newFiles.map(file => URL.createObjectURL(file));
@@ -2890,7 +2902,7 @@ const FinancialReportScreen = ({ onSelect }: { onSelect: (v: View) => void }) =>
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 print:border-slate-200">
         <h3 className="font-bold mb-4">توزيع الإيرادات</h3>
         <div className="h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <PieChart>
               <Pie
                 data={[
@@ -3275,6 +3287,18 @@ const OfficialPrintScreen = ({ onSelect, property }: { onSelect: (v: View) => vo
     return () => clearTimeout(timer);
   }, []);
 
+  if (!property) {
+    return (
+      <div className="min-h-screen bg-[#f8f7f6] flex flex-col items-center justify-center p-4">
+        <Icon name="error_outline" className="text-4xl text-slate-400 mb-4" />
+        <p className="text-slate-500 mb-4">لم يتم تحديد عقار</p>
+        <button onClick={() => onSelect('manager_dashboard')} className="px-6 py-2 bg-primary text-white rounded-xl font-bold">
+          العودة للرئيسية
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-100 py-10 px-4 print:p-0 print:bg-white">
       <AnimatePresence>
@@ -3439,8 +3463,20 @@ const OfficialPrintScreen = ({ onSelect, property }: { onSelect: (v: View) => vo
   );
 };
 
-const PropertyReportScreen = ({ onSelect, property }: { onSelect: (v: View) => void, property: any }) => {
+const PropertyReportScreen = ({ onSelect, property, properties }: { onSelect: (v: View) => void, property: any, properties: any[] }) => {
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
+
+  if (!property) {
+    return (
+      <div className="min-h-screen bg-[#f8f7f6] flex flex-col items-center justify-center p-4">
+        <Icon name="error_outline" className="text-4xl text-slate-400 mb-4" />
+        <p className="text-slate-500 mb-4">لم يتم تحديد عقار</p>
+        <button onClick={() => onSelect('manager_dashboard')} className="px-6 py-2 bg-primary text-white rounded-xl font-bold">
+          العودة للرئيسية
+        </button>
+      </div>
+    );
+  }
 
   return (
     <ReportLayout title={`تقرير ${property.name}`} onBack={() => onSelect('property_details')}>
@@ -3471,13 +3507,10 @@ const PropertyReportScreen = ({ onSelect, property }: { onSelect: (v: View) => v
               className="overflow-hidden mt-2 bg-white rounded-2xl shadow-xl border border-slate-100"
             >
               <div className="p-2 max-h-60 overflow-y-auto">
-                {PROPERTIES.map((p) => (
+                {properties.map((p) => (
                   <button 
                     key={p.id}
                     onClick={() => {
-                      // We need a way to update the selected property in App state
-                      // For now, we'll just use the onSelect with a custom view or handle it in App
-                      // Actually, let's update App.tsx to handle this
                       (window as any).selectProperty(p);
                       setIsSelectorOpen(false);
                     }}
@@ -3820,6 +3853,13 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
+    (window as any).selectProperty = setSelectedProperty;
+    return () => {
+      delete (window as any).selectProperty;
+    };
+  }, []);
+
+  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setIsAuthReady(true);
@@ -3885,7 +3925,7 @@ export default function App() {
       case 'docs': return <TechnicalDocsScreen onSelect={setCurrentView} />;
       case 'notifications': return <NotificationsScreen onSelect={setCurrentView} />;
       case 'financial_report': return <FinancialReportScreen onSelect={setCurrentView} />;
-      case 'property_report': return <PropertyReportScreen onSelect={setCurrentView} property={selectedProperty} />;
+      case 'property_report': return <PropertyReportScreen onSelect={setCurrentView} property={selectedProperty} properties={properties} />;
       case 'official_print': return <OfficialPrintScreen onSelect={setCurrentView} property={selectedProperty} />;
       case 'zakat_tax': return <ZakatTaxScreen onSelect={setCurrentView} />;
       case 'ejar_integration': return <EjarIntegrationScreen onSelect={setCurrentView} />;
