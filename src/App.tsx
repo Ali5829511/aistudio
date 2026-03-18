@@ -975,7 +975,7 @@ const AccountingScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
           <Icon name="arrow_forward" className="text-2xl" />
         </button>
         <h2 className="text-lg font-black text-white">المحاسبة والمالية</h2>
-        <button className="flex size-10 items-center justify-center rounded-xl gold-gradient text-brand-dark shadow-lg shadow-primary/20">
+        <button onClick={() => onSelect('invoices')} className="flex size-10 items-center justify-center rounded-xl gold-gradient text-brand-dark shadow-lg shadow-primary/20">
           <Icon name="add" className="text-2xl" />
         </button>
       </header>
@@ -999,7 +999,7 @@ const AccountingScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
                <div className="flex gap-2 text-[10px] bg-white/5 px-4 py-2 rounded-full border border-white/10 backdrop-blur-sm font-bold text-slate-400">
                 <span>آخر تحديث: اليوم، ٩:٣٠ ص</span>
               </div>
-              <button className="text-xs font-black text-primary underline underline-offset-4">كشف حساب</button>
+              <button onClick={() => onSelect('financial_report')} className="text-xs font-black text-primary underline underline-offset-4">كشف حساب</button>
             </div>
           </div>
         </motion.div>
@@ -1072,7 +1072,7 @@ const AccountingScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
         <div className="space-y-4">
           <div className="flex items-center justify-between px-1">
             <h3 className="text-xl font-black text-brand-dark">آخر المعاملات</h3>
-            <button className="text-primary text-xs font-black uppercase tracking-widest">فلترة</button>
+            <button onClick={() => onSelect('invoices')} className="text-primary text-xs font-black uppercase tracking-widest">فلترة</button>
           </div>
           <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden divide-y divide-slate-50">
             {[
@@ -2549,14 +2549,54 @@ const TenantDashboard = ({ onSelect, onNavigateForms }: { onSelect: (v: View) =>
 
 const SettingsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
   const { t } = useLang();
+  const [selectedColor, setSelectedColor] = useState(0);
+  const [twoFAEnabled, setTwoFAEnabled] = useState(true);
+  const [notifications, setNotifications] = useState([
+    { label: 'إشعارات البريد الإلكتروني', active: true },
+    { label: 'تنبيهات العقود المنتهية', active: true },
+    { label: 'رسائل المستأجرين', active: false },
+  ]);
+  const [saveToast, setSaveToast] = useState(false);
+
+  const handleSave = () => {
+    setSaveToast(true);
+    setTimeout(() => setSaveToast(false), 2200);
+  };
+
+  const toggleNotif = (index: number) => {
+    setNotifications(prev => prev.map((n, i) => i === index ? { ...n, active: !n.active } : n));
+  };
+
+  const colors = [
+    { hex: '#f2cc0d', name: 'رمز الإبداع' },
+    { hex: '#2563eb', name: 'أزرق كلاسيك' },
+    { hex: '#059669', name: 'أخضر ملكي' },
+    { hex: '#1e293b', name: 'رمادي ليلي' },
+  ];
+
   return (
     <div className="min-h-screen bg-[#f8f8f5] pb-24">
+      {/* Save toast */}
+      <AnimatePresence>
+        {saveToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-20 left-1/2 -translate-x-1/2 z-[70] bg-green-600 text-white text-sm font-bold px-6 py-3 rounded-2xl shadow-xl flex items-center gap-2"
+          >
+            <Icon name="check_circle" className="text-base" />
+            تم حفظ الإعدادات بنجاح
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <header className="flex items-center justify-between p-4 bg-white sticky top-0 z-10 shadow-sm border-b border-primary/10">
         <button onClick={() => onSelect('manager_dashboard')} className="p-2 rounded-full hover:bg-slate-100 transition-colors">
           <Icon name="arrow_forward" className="text-2xl" />
         </button>
         <h2 className="text-lg font-bold flex-1 text-center">{t('settings_title')}</h2>
-        <button className="text-primary font-bold text-sm px-2">{t('save')}</button>
+        <button onClick={handleSave} className="text-primary font-bold text-sm px-2 hover:text-primary/80 transition-colors">{t('save')}</button>
       </header>
 
       <main className="p-4 space-y-6">
@@ -2591,7 +2631,12 @@ const SettingsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
                 <p className="text-[10px] text-gray-400">يظهر في التقارير والفواتير (PNG, SVG)</p>
               </div>
               <div className="flex items-center gap-4">
-                <button className="px-4 py-2 bg-primary/10 text-primary text-xs font-black rounded-lg hover:bg-primary/20 transition-colors">تحديث الشعار</button>
+                <button
+                  onClick={handleSave}
+                  className="px-4 py-2 bg-primary/10 text-primary text-xs font-black rounded-lg hover:bg-primary/20 transition-colors"
+                >
+                  تحديث الشعار
+                </button>
                 <div className="size-16 bg-brand-dark rounded-xl flex items-center justify-center border-2 border-primary/20 shadow-lg shadow-brand-dark/10 overflow-hidden">
                   <Logo className="size-12" />
                 </div>
@@ -2600,24 +2645,20 @@ const SettingsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
             <div className="pt-6 border-t border-slate-50">
               <p className="text-sm font-black text-brand-dark mb-4">اللون الأساسي للنظام</p>
               <div className="flex items-center gap-4">
-                {[
-                  { hex: '#f2cc0d', name: 'رمز الإبداع' },
-                  { hex: '#2563eb', name: 'أزرق كلاسيك' },
-                  { hex: '#059669', name: 'أخضر ملكي' },
-                  { hex: '#1e293b', name: 'رمادي ليلي' }
-                ].map((color, i) => (
-                  <button 
-                    key={i} 
+                {colors.map((color, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setSelectedColor(i)}
                     className={cn(
-                      "group flex flex-col items-center gap-2",
-                      i === 0 ? "opacity-100" : "opacity-40 grayscale hover:grayscale-0 hover:opacity-100 transition-all"
+                      "group flex flex-col items-center gap-2 transition-all",
+                      selectedColor === i ? "opacity-100" : "opacity-40 grayscale hover:grayscale-0 hover:opacity-100"
                     )}
                   >
-                    <div 
+                    <div
                       className={cn(
-                        "w-10 h-10 rounded-2xl border-2 shadow-sm",
-                        i === 0 ? "border-primary scale-110" : "border-transparent"
-                      )} 
+                        "w-10 h-10 rounded-2xl border-2 shadow-sm transition-transform",
+                        selectedColor === i ? "border-primary scale-110" : "border-transparent"
+                      )}
                       style={{ backgroundColor: color.hex }}
                     ></div>
                     <span className="text-[9px] font-bold text-slate-400">{color.name}</span>
@@ -2663,25 +2704,28 @@ const SettingsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
             <h3 className="text-sm font-bold">الأمان والخصوصية</h3>
           </div>
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 divide-y divide-gray-50">
-            <button className="w-full p-4 flex items-center justify-between">
+            <button className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
               <div className="flex items-center gap-3">
                 <Icon name="lock" className="text-primary" />
                 <span className="text-sm font-bold">تغيير كلمة المرور</span>
               </div>
               <Icon name="chevron_left" className="text-gray-300" />
             </button>
-            <div className="p-4 flex items-center justify-between">
+            <button
+              onClick={() => setTwoFAEnabled(prev => !prev)}
+              className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
+            >
               <div className="flex items-center gap-3">
                 <Icon name="verified_user" className="text-primary" />
-                <div>
+                <div className="text-right">
                   <p className="text-sm font-bold">المصادقة الثنائية (2FA)</p>
                   <p className="text-[10px] text-gray-400">حماية إضافية لحسابك</p>
                 </div>
               </div>
-              <div className="w-12 h-6 bg-primary rounded-full relative">
-                <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full"></div>
+              <div className={cn("w-12 h-6 rounded-full relative transition-colors", twoFAEnabled ? 'bg-primary' : 'bg-gray-200')}>
+                <div className={cn("absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-200", twoFAEnabled ? 'right-1' : 'left-1')} />
               </div>
-            </div>
+            </button>
           </div>
         </section>
 
@@ -2691,17 +2735,17 @@ const SettingsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
             <h3 className="text-sm font-bold">الإشعارات</h3>
           </div>
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 space-y-4">
-            {[
-              { label: 'إشعارات البريد الإلكتروني', active: true },
-              { label: 'تنبيهات العقود المنتهية', active: true },
-              { label: 'رسائل المستأجرين', active: false },
-            ].map((n, i) => (
-              <div key={i} className="flex items-center justify-between">
+            {notifications.map((n, i) => (
+              <button
+                key={i}
+                onClick={() => toggleNotif(i)}
+                className="w-full flex items-center justify-between"
+              >
                 <span className="text-sm font-bold">{n.label}</span>
-                <div className={`w-12 h-6 rounded-full relative transition-colors ${n.active ? 'bg-primary' : 'bg-gray-200'}`}>
-                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${n.active ? 'right-1' : 'left-1'}`}></div>
+                <div className={cn("w-12 h-6 rounded-full relative transition-colors", n.active ? 'bg-primary' : 'bg-gray-200')}>
+                  <div className={cn("absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-200", n.active ? 'right-1' : 'left-1')} />
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </section>
@@ -3536,7 +3580,7 @@ const TechnicalDocsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
 };
 
 const NotificationsScreen = ({ onSelect }: { onSelect: (v: View) => void }) => {
-  const { CONTRACTS } = useAppData();
+  const { CONTRACTS, TENANTS, MAINTENANCE_REQUESTS } = useAppData();
   const [filter, setFilter] = useState('الكل');
 
   // Generate smart notifications from data
