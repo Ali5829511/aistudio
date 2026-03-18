@@ -270,6 +270,6 @@ export const MessageTemplatesScreen = ({ onSelect }: { onSelect: (v: View) => vo
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 };
