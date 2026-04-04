@@ -113,7 +113,6 @@ export const PropertyFormsScreen = ({ onSelect, initialCategory = 'الكل' }: 
             </motion.div>
           ))}
         </AnimatePresence>
-      </div>
 
       {/* Form Fill Modal */}
       <AnimatePresence>
